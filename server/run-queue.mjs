@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { listRuns, saveRun, loadRegistry } from './storage.mjs';
+import { listRuns, saveRun, loadRegistry, getRun } from './storage.mjs';
 import { DATA_DIR } from './storage.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -70,11 +70,18 @@ export async function enqueueRun(body) {
     const reqPath = path.join(WORKER_DIR, `${runId}-req.json`);
     const outPath = path.join(WORKER_DIR, `${runId}-out.json`);
     const previousReport = pickPreviousReport(body);
+    const retestPriorReport = body.retestOf ? getRun(body.retestOf) : null;
 
     fs.writeFileSync(
       reqPath,
       JSON.stringify({
-        body: { ...body, runId },
+        body: {
+          ...body,
+          runId,
+          retestPriorReport: retestPriorReport
+            ? { runId: retestPriorReport.runId, findings: retestPriorReport.findings }
+            : null,
+        },
         outPath,
         previousRunId: previousReport?.runId ?? null,
       }),

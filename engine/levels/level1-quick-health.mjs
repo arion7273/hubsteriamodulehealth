@@ -369,6 +369,9 @@ export async function runLevel1QuickHealth(ctx) {
       );
     }
   } finally {
+    if (ctx.runMeta && session?.finalUrl) {
+      ctx.runMeta.finalUrl = session.finalUrl;
+    }
     await browser.close();
   }
 

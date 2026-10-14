@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PACK_DEFINITIONS } from '../engine/packs/definitions.mjs';
+import { normalizeRunReport } from '../engine/report-normalize.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = path.join(__dirname, '../data');
@@ -78,7 +79,9 @@ export function saveRun(report) {
 }
 
 export function getRun(runId) {
-  return loadJson(path.join(RUNS_DIR, `${runId}.json`), null);
+  const raw = loadJson(path.join(RUNS_DIR, `${runId}.json`), null);
+  if (!raw) return null;
+  return normalizeRunReport(raw);
 }
 
 export function loadModuleSettings(appId) {

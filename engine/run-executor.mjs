@@ -7,6 +7,9 @@ import { runLevel4Quality } from './levels/level4-quality.mjs';
 import { runLevel5Resilience } from './levels/level5-resilience.mjs';
 import { mergeWithHistory, summarizeFindings, createFinding, dedupeFindings } from './findings.mjs';
 import { structureReport } from './report-structure.mjs';
+import { deriveExecution, formatHeadline } from './report-execution.mjs';
+import { expandRetestCheckIds, mergeRetestFindings } from './retest-merge.mjs';
+import { attachToolInventory, normalizeRunReport } from './report-normalize.mjs';
 import { assertUrlAllowed } from './security/url-guard.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -86,7 +89,9 @@ export async function executeRun(runRequest, registry, previousReport) {
   const packs = runRequest.packs?.length ? runRequest.packs : null;
   const allFindings = [];
   const runStarted = Date.now();
+  const runStartedAt = new Date(runStarted).toISOString();
   let toolRuns = [];
+  const runMeta = { finalUrl: null };
 
   const repoRoot = runRequest.repoRoot ?? app.repositoryPath ?? null;
   if (repoRoot) {
@@ -125,6 +130,7 @@ export async function executeRun(runRequest, registry, previousReport) {
     moduleSettings,
     retestOf: runRequest.retestOf,
     repoRoot: repoRoot ? (path.isAbsolute(repoRoot) ? repoRoot : path.resolve(repoRoot)) : null,
+    runMeta,
   };
 
   if (packs?.length) {
@@ -159,34 +165,53 @@ export async function executeRun(runRequest, registry, previousReport) {
   }
 
   const deduped = dedupeFindings(allFindings);
-  const merged = mergeWithHistory(deduped, previousReport?.findings ?? []);
-  return buildReport(runRequest, app, merged, {
+  let merged = mergeWithHistory(deduped, previousReport?.findings ?? []);
+
+  const retestPrior = runRequest.retestPriorReport ?? null;
+  if (runRequest.retestOf && runRequest.checkFilter?.length && retestPrior?.findings?.length) {
+    const retestIds = expandRetestCheckIds(runRequest.checkFilter);
+    merged = mergeRetestFindings(retestPrior.findings, merged, retestIds);
+  }
+
+  const durationMs = Date.now() - runStarted;
+  const draft = buildReport(runRequest, app, merged, {
     budgets,
     envConfig,
-    durationMs: Date.now() - runStarted,
+    durationMs,
+    startedAt: runStartedAt,
+    endedAt: new Date().toISOString(),
     targetUrl,
     repoRoot: baseCtx.repoRoot,
+    finalUrl: runMeta.finalUrl,
     previousRunId: previousReport?.runId,
+    retestOf: runRequest.retestOf ?? null,
+    retestMode: runRequest.retestMode ?? null,
     toolRuns,
     packsExecuted: packs ?? levels.map((l) => `level-${l}`),
     packDefinitions: PACK_DEFINITIONS,
+    artifactDir: `data/artifacts/${runRequest.runId}`,
+    runScope: {
+      levels,
+      inputMode,
+      packs: packs ?? [],
+      environment: runRequest.environment,
+      checkFilter: runRequest.checkFilter ?? null,
+    },
   });
+
+  const withTools = await attachToolInventory(draft, baseCtx);
+  return normalizeRunReport(withTools);
 }
 
 function buildReport(runRequest, app, findings, meta = {}) {
-  const counts = summarizeFindings(findings);
-  const executed =
-    counts.pass + counts.fail + counts.blocked + counts.skip + counts.not_tested + counts.not_applicable;
+  const execution = deriveExecution(findings);
+  const counts = execution.counts;
   const modulesConfigured = (app.modules ?? []).length;
   const modulesCovered = new Set(findings.filter((f) => f.moduleId).map((f) => f.moduleId)).size;
 
-  const passExecuted = counts.pass;
-  const failExecuted = counts.fail;
-  let headline = meta.blocked
-    ? 'Run blocked before execution'
-    : failExecuted === 0
-      ? `All ${passExecuted} executed checks passed; ${modulesCovered} of ${modulesConfigured} modules referenced in findings.`
-      : `${failExecuted} check(s) failed; ${passExecuted} passed of ${executed} executed; ${modulesCovered} of ${modulesConfigured} modules referenced.`;
+  const headline = formatHeadline(execution, modulesConfigured, modulesCovered, {
+    runBlocked: meta.blocked,
+  });
 
   const failHigh = findings.filter(
     (f) => f.status === 'fail' && (f.severity === 'blocker' || f.severity === 'high'),
@@ -204,6 +229,7 @@ function buildReport(runRequest, app, findings, meta = {}) {
 
   return {
     version: 2,
+    reportSchemaVersion: 3,
     runId: runRequest.runId,
     appId: app.id,
     appName: app.name,
@@ -215,7 +241,22 @@ function buildReport(runRequest, app, findings, meta = {}) {
     timezone: registryTimezone(),
     gate,
     headline,
-    summary: { counts, executed, modulesConfigured, modulesCovered },
+    summary: {
+      counts,
+      execution: {
+        planned: execution.planned,
+        completed: execution.completed,
+        blocked: execution.blocked,
+        notExecuted: execution.notExecuted,
+        notApplicable: execution.notApplicable,
+      },
+      modulesConfigured,
+      modulesCovered,
+      moduleCoverageNote:
+        modulesConfigured === 0
+          ? 'Module coverage not configured for this app.'
+          : `${modulesCovered} of ${modulesConfigured} module(s) referenced in findings.`,
+    },
     tools: meta.toolRuns ?? [],
     packsExecuted: meta.packsExecuted ?? [],
     modulesInventory: (app.modules ?? []).map((m) => ({
@@ -226,12 +267,20 @@ function buildReport(runRequest, app, findings, meta = {}) {
     structured,
     recommendations,
     meta: {
-      ...meta,
+      budgets: meta.budgets,
+      envConfig: meta.envConfig,
       role: meta.role ?? null,
       targetUrl: meta.targetUrl ?? null,
       repoRoot: meta.repoRoot ?? runRequest.repoRoot ?? app.repositoryPath ?? null,
+      finalUrl: meta.finalUrl ?? null,
       durationMs: meta.durationMs ?? null,
+      startedAt: meta.startedAt ?? null,
+      endedAt: meta.endedAt ?? null,
       previousRunId: meta.previousRunId ?? null,
+      retestOf: meta.retestOf ?? null,
+      retestMode: meta.retestMode ?? null,
+      artifactDir: meta.artifactDir ?? null,
+      runScope: meta.runScope ?? null,
       incomplete: meta.incomplete ?? false,
     },
     comparisonNote:

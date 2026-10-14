@@ -1,0 +1,148 @@
+#!/usr/bin/env node
+/**
+ * Controlled report fixture + live scan verification for report accuracy.
+ */
+import assert from 'node:assert/strict';
+import { createFinding } from '../engine/findings.mjs';
+import { normalizeRunReport } from '../engine/report-normalize.mjs';
+import { executeRun } from '../engine/run-executor.mjs';
+import { loadRegistry, saveRun, getRun } from '../server/storage.mjs';
+import { buildToolInventory } from '../engine/tool-inventory.mjs';
+
+function mk(status, i, extra = {}) {
+  return createFinding({
+    checkId: extra.checkId ?? `fixture.check.${i}`,
+    appId: 'adhoc-url-scan',
+    environment: 'custom',
+    level: 1,
+    status,
+    severity: extra.severity ?? (status === 'fail' ? 'high' : 'info'),
+    title: extra.title ?? `Fixture ${status} #${i}`,
+    actual: extra.actual ?? status,
+    blockedBy: extra.blockedBy,
+    detail: extra.detail,
+    evidence: extra.evidence ?? (status === 'fail' ? [{ type: 'text', value: 'fixture evidence' }] : []),
+    meta: extra.meta,
+  });
+}
+
+function buildCanonicalFindings() {
+  const findings = [];
+  for (let i = 0; i < 9; i++) findings.push(mk('pass', i));
+  findings.push(
+    mk('fail', 9, { checkId: 'l1.readiness.application', severity: 'high', title: 'App defect high' }),
+    mk('fail', 10, { checkId: 'l1.links.broken', severity: 'medium', title: 'Review medium fail' }),
+    mk('fail', 11, { checkId: 'eslint.preflight', severity: 'blocker', title: 'Runner ESLint preflight', meta: { tool: 'eslint' } }),
+    mk('fail', 12, { checkId: 'playwright.crash', severity: 'blocker', title: 'Playwright runner crashed' }),
+  );
+  findings.push(
+    mk('blocked', 13, {
+      checkId: 'l1.links.coverage',
+      title: 'Same-origin link crawl',
+      blockedBy: 'l1.readiness.application',
+      actual: 'Blocked until application readiness passes',
+    }),
+  );
+  for (let i = 0; i < 3; i++) {
+    findings.push(
+      mk('not_tested', 14 + i, {
+        checkId: `l1.deferred.${i}`,
+        title: `Deferred check ${i}`,
+        detail: 'Prerequisite window exhausted',
+      }),
+    );
+  }
+  return findings;
+}
+
+function verifyReport(report) {
+  const c = report.summary.counts;
+  assert.equal(c.pass, 9, 'pass count');
+  assert.equal(c.fail, 4, 'fail count');
+  assert.equal(c.blocked, 1, 'blocked count');
+  assert.equal(c.not_tested, 3, 'not_tested count');
+
+  const s = report.structured.sections;
+  assert.equal(s.passing.length, 9, 'passing section');
+  assert.equal(s.app_defects.length + s.review.length + s.runner_failures.filter((f) => f.status === 'fail').length, 4, 'fail sections');
+  assert.equal(s.blocked.length, 1, 'blocked section');
+  assert.equal(s.not_executed.length, 3, 'not executed section');
+  assert.equal(report.consistency.ok, true, `consistency: ${report.consistency.issues?.join('; ')}`);
+
+  const failWithEvidence = report.findings.filter((f) => f.status === 'fail');
+  assert.equal(failWithEvidence.length, 4);
+  for (const f of failWithEvidence) {
+    assert.ok(f.evidence?.length || f.actual, `evidence for ${f.checkId}`);
+  }
+}
+
+async function main() {
+  const findings = buildCanonicalFindings();
+  const raw = {
+    version: 2,
+    runId: 'run_fixture_canonical_mixed',
+    appId: 'adhoc-url-scan',
+    appName: 'Quick URL scan',
+    environment: 'custom',
+    inputMode: 'url',
+    levels: [1, 4],
+    generatedAt: new Date().toISOString(),
+    gate: 'fix_blockers',
+    findings,
+    meta: {
+      targetUrl: 'http://127.0.0.1:4177/fixtures/defect-app/index.html',
+      finalUrl: 'http://127.0.0.1:4177/fixtures/defect-app/index.html',
+      durationMs: 4200,
+      startedAt: new Date().toISOString(),
+      endedAt: new Date().toISOString(),
+    },
+    modulesInventory: [],
+  };
+
+  const normalized = normalizeRunReport(raw);
+  verifyReport(normalized);
+  saveRun(normalized);
+
+  const fromDisk = getRun('run_fixture_canonical_mixed');
+  verifyReport(fromDisk);
+
+  const registry = loadRegistry();
+  const app = registry.apps.find((a) => a.id === 'defect-fixture');
+  const port = process.env.PORT || 4177;
+  const targetUrl = `http://127.0.0.1:${port}/fixtures/defect-app/index.html`;
+
+  const live = await executeRun(
+    {
+      runId: `run_verify_${Date.now()}`,
+      appId: 'defect-fixture',
+      environment: 'local',
+      inputMode: 'url',
+      levels: [1],
+      targetUrl,
+    },
+    registry,
+    null,
+  );
+
+  assert.ok(live.structured?.sections, 'live structured sections');
+  assert.ok(live.meta?.targetUrl, 'live targetUrl');
+  assert.ok(live.meta?.durationMs != null, 'live duration');
+  assert.equal(live.summary.moduleCoverageNote?.includes('not configured') || live.summary.modulesConfigured > 0, true);
+  assert.ok(live.toolInventory?.length >= 10, 'tool inventory rows');
+
+  const pw = live.toolInventory.find((t) => t.tool === 'Playwright');
+  assert.ok(pw?.executed, 'Playwright executed on URL L1 scan');
+  const eslint = live.toolInventory.find((t) => t.tool === 'ESLint');
+  assert.equal(eslint?.executed, false, 'ESLint not executed on URL-only');
+  assert.match(eslint?.executedReason ?? '', /repository|URL-only/i);
+
+  saveRun(live);
+
+  const inventory = await buildToolInventory(live, { preflight: false });
+  console.log(JSON.stringify({ ok: true, fixture: fromDisk.summary, live: { runId: live.runId, summary: live.summary, toolInventory: inventory } }, null, 2));
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

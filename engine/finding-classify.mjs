@@ -1,0 +1,51 @@
+/** @typedef {'app_defect'|'runner_failure'|'review'|'informational'} FindingOutcomeKind */
+
+const RUNNER_CHECK_PREFIXES = [
+  'run.',
+  'repo.',
+  'packs.',
+  'eslint.',
+  'typescript.',
+  'vitest.',
+  'gitleaks.',
+  'npm-audit.',
+  'semgrep.',
+  'zap.',
+  'k6.',
+  'lighthouse.',
+  'axe-core.',
+  'playwright.',
+];
+
+const RUNNER_CHECK_SUFFIXES = ['.preflight', '.crash', '.input-mode'];
+
+/**
+ * Classify a finding for report sections (not for changing pass/fail).
+ * @param {object} f
+ * @returns {FindingOutcomeKind}
+ */
+export function classifyFindingOutcome(f) {
+  if (f.status === 'pass' || f.status === 'not_applicable') return 'informational';
+  if (f.status === 'blocked') return 'runner_failure';
+
+  const checkId = f.checkId ?? '';
+  const isRunner =
+    RUNNER_CHECK_SUFFIXES.some((s) => checkId.endsWith(s)) ||
+    RUNNER_CHECK_PREFIXES.some((p) => checkId.startsWith(p)) ||
+    f.meta?.tool === 'runner' ||
+    (f.title && /runner crashed|not available/i.test(f.title));
+
+  if (f.status === 'fail' && isRunner) return 'runner_failure';
+  if (f.status === 'fail' && (f.severity === 'blocker' || f.severity === 'high')) return 'app_defect';
+  if (f.status === 'fail') return 'review';
+  if (f.status === 'not_tested' || f.status === 'skip' || f.status === 'not_started') return 'informational';
+  return 'informational';
+}
+
+export function prerequisiteLabel(f) {
+  if (f.blockedBy) return `Prerequisite not met: ${f.blockedBy}`;
+  if (f.detail && /Blocked:/i.test(f.detail)) return f.detail;
+  if (f.status === 'not_tested') return f.detail ?? f.actual ?? 'Check was not executed in this run.';
+  if (f.status === 'blocked') return f.actual ?? f.detail ?? 'Blocked by run configuration or prerequisites.';
+  return f.remediation?.summary ?? f.detail ?? null;
+}

@@ -22,8 +22,9 @@ async function main() {
   const registry = loadRegistry();
   const settings = loadModuleSettings(body.appId);
   const previousReport = previousRunId ? getRun(previousRunId) : null;
+  const retestPriorReport = body.retestPriorReport ?? (body.retestOf ? getRun(body.retestOf) : null);
   const report = await executeRun(
-    { ...body, moduleSettings: settings },
+    { ...body, moduleSettings: settings, retestPriorReport },
     registry,
     previousReport,
   );
