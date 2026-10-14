@@ -1,5 +1,7 @@
 import { runLevel1QuickHealth } from '../levels/level1-quick-health.mjs';
+import { runLevel3Workflows } from '../levels/level3-workflows.mjs';
 import { runLevel4Quality } from '../levels/level4-quality.mjs';
+import { runLevel5Resilience } from '../levels/level5-resilience.mjs';
 
 export const playwrightLiveAdapter = {
   id: 'playwright',
@@ -18,6 +20,12 @@ export const playwrightLiveAdapter = {
     }
     if (ctx.activePack === 'ui-a11y' || levels.includes(4)) {
       findings.push(...(await runLevel4Quality(ctx)));
+    }
+    if (ctx.activePack === 'workflow' || levels.includes(3)) {
+      findings.push(...(await runLevel3Workflows(ctx)));
+    }
+    if (ctx.activePack === 'load-recovery' || levels.includes(5)) {
+      findings.push(...(await runLevel5Resilience(ctx)));
     }
     return {
       tool: 'playwright',

@@ -5,6 +5,7 @@ data/registry.apps.json
 data/runs/
 data/evidence/
 data/artifacts/
+data/worker/
 data/settings/
 node_modules/
 web/node_modules/

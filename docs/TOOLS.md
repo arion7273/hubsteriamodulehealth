@@ -18,7 +18,8 @@ Open-source tools run on the **scan runner** (Node host), not on Vercel static h
 | ESLint | `eslint.config.js` / script | Lints `src` by default; uses repo config |
 | TypeScript | `tsconfig.json` + `typescript` | `tsc --noEmit` |
 | Vitest | `vitest` in devDependencies | Does not replace Jest projects (use existing `npm test` manually) |
-| npm audit | npm lockfile | Advisory only — not confirmed exploit |
+| Dependency audit | npm / pnpm / yarn lockfiles | Advisory only — not confirmed exploit |
+| Jest | `jest` in repo | Used when Vitest is not detected |
 | Semgrep | `semgrep` binary | Falls back to `.semgrep/rules.yml` in repo |
 | Gitleaks | `gitleaks` binary | Evidence redacted in reports |
 

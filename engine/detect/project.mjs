@@ -14,14 +14,17 @@ export function detectProject(repoRoot) {
       ? 'yarn'
       : 'npm';
 
-  const testRunner =
-    scripts.test?.includes('vitest') || (pkg.devDependencies?.vitest || pkg.dependencies?.vitest)
-      ? 'vitest'
-      : scripts.test?.includes('jest')
-        ? 'jest'
-        : scripts.test
-          ? 'npm-test'
-          : null;
+  const hasVitest =
+    scripts.test?.includes('vitest') || pkg.devDependencies?.vitest || pkg.dependencies?.vitest;
+  const hasJest =
+    scripts.test?.includes('jest') ||
+    pkg.devDependencies?.jest ||
+    pkg.dependencies?.jest ||
+    fs.existsSync(path.join(repoRoot, 'jest.config.js')) ||
+    fs.existsSync(path.join(repoRoot, 'jest.config.cjs')) ||
+    fs.existsSync(path.join(repoRoot, 'jest.config.mjs'));
+
+  const testRunner = hasVitest ? 'vitest' : hasJest ? 'jest' : scripts.test ? 'npm-test' : null;
 
   return {
     valid: true,

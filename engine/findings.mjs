@@ -46,7 +46,33 @@ export function createFinding(p) {
     occurrences: p.occurrences ?? 1,
     unstable: p.unstable ?? false,
     initialFailureRetained: p.initialFailureRetained ?? false,
+    durationMs: p.durationMs ?? null,
+    meta: p.meta ?? null,
   };
+}
+
+/**
+ * Merge duplicate findings by dedupeKey while preserving tool provenance.
+ */
+export function dedupeFindings(findings) {
+  const map = new Map();
+  for (const f of findings) {
+    const key = f.dedupeKey ?? f.checkId;
+    const existing = map.get(key);
+    if (!existing) {
+      const tools = f.meta?.tool ? [f.meta.tool] : [];
+      map.set(key, { ...f, meta: { ...(f.meta ?? {}), tools } });
+      continue;
+    }
+    const tools = new Set([...(existing.meta?.tools ?? []), f.meta?.tool].filter(Boolean));
+    map.set(key, {
+      ...existing,
+      evidence: [...(existing.evidence ?? []), ...(f.evidence ?? [])],
+      meta: { ...(existing.meta ?? {}), ...(f.meta ?? {}), tools: [...tools] },
+      occurrences: (existing.occurrences ?? 1) + 1,
+    });
+  }
+  return [...map.values()];
 }
 
 export function summarizeFindings(findings) {

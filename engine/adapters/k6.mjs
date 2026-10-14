@@ -12,8 +12,9 @@ export const k6Adapter = {
   version: '0.52+',
   inputModes: ['url'],
   async preflight(ctx) {
-    if (process.env.K6_LOAD_ENABLED !== 'true') {
-      return { ok: false, reason: 'k6 load tests disabled by default (staging only, K6_LOAD_ENABLED=true)' };
+    const settingsOn = ctx.moduleSettings?.packs?.['load-recovery']?.k6Enabled === true;
+    if (process.env.K6_LOAD_ENABLED !== 'true' && !settingsOn) {
+      return { ok: false, reason: 'k6 load tests disabled (K6_LOAD_ENABLED=true or enable in app settings)' };
     }
     if (!(await commandExists('k6', ['version']))) return { ok: false, reason: 'k6 binary not installed' };
     if (ctx.environment === 'production') return { ok: false, reason: 'Load tests blocked on production' };

@@ -5,7 +5,7 @@ import { runLevel2ModuleChecks } from './levels/level2-module.mjs';
 import { runLevel3Workflows } from './levels/level3-workflows.mjs';
 import { runLevel4Quality } from './levels/level4-quality.mjs';
 import { runLevel5Resilience } from './levels/level5-resilience.mjs';
-import { mergeWithHistory, summarizeFindings, createFinding } from './findings.mjs';
+import { mergeWithHistory, summarizeFindings, createFinding, dedupeFindings } from './findings.mjs';
 import { structureReport } from './report-structure.mjs';
 import { assertUrlAllowed } from './security/url-guard.mjs';
 import fs from 'node:fs';
@@ -158,12 +158,14 @@ export async function executeRun(runRequest, registry, previousReport) {
     if (level === 5) allFindings.push(...(await runLevel5Resilience(baseCtx)));
   }
 
-  const merged = mergeWithHistory(allFindings, previousReport?.findings ?? []);
+  const deduped = dedupeFindings(allFindings);
+  const merged = mergeWithHistory(deduped, previousReport?.findings ?? []);
   return buildReport(runRequest, app, merged, {
     budgets,
     envConfig,
     durationMs: Date.now() - runStarted,
     targetUrl,
+    repoRoot: baseCtx.repoRoot,
     previousRunId: previousReport?.runId,
     toolRuns,
     packsExecuted: packs ?? levels.map((l) => `level-${l}`),
@@ -227,6 +229,7 @@ function buildReport(runRequest, app, findings, meta = {}) {
       ...meta,
       role: meta.role ?? null,
       targetUrl: meta.targetUrl ?? null,
+      repoRoot: meta.repoRoot ?? runRequest.repoRoot ?? app.repositoryPath ?? null,
       durationMs: meta.durationMs ?? null,
       previousRunId: meta.previousRunId ?? null,
       incomplete: meta.incomplete ?? false,

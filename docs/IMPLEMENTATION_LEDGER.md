@@ -8,18 +8,22 @@
 | HTML snapshot input | IMPLEMENTED_VERIFIED | Isolated Playwright context |
 | Level 1 quick health | IMPLEMENTED_VERIFIED | Fixture defect detection |
 | Level 2 module checks | IMPLEMENTED_UNVERIFIED | Filesystem module checks + browser stubs |
-| Level 3 workflow recipes | IMPLEMENTED_UNVERIFIED | Templates marked unconfigured |
-| Level 4 quality (a11y/viewport/visual) | IMPLEMENTED_VERIFIED | `verify:adapters` — axe, viewports, pixel baseline |
-| Level 5 resilience/load | IMPLEMENTED_UNVERIFIED | k6 adapter opt-in (`K6_LOAD_ENABLED`) |
-| Daily schedules | IMPLEMENTED_UNVERIFIED | Pack rotation + weekly repo cron when configured |
+| Level 3 workflow recipes | IMPLEMENTED_UNVERIFIED | Templates until app-specific recipes configured |
+| Level 4 quality (a11y/viewport/visual) | IMPLEMENTED_VERIFIED | `verify:adapters` |
+| Level 5 recovery + k6 pack | IMPLEMENTED_VERIFIED | `verify:adapters` recovery + k6 blocked default |
+| Daily schedules | IMPLEMENTED_VERIFIED | Pack rotation + weekly repo cron in `scheduler.mjs` |
 | Run history + diff | IMPLEMENTED_VERIFIED | Comparable-run comparison in reports |
 | Dashboard UI | IMPLEMENTED_VERIFIED | Overview, run, reports, settings |
-| Credentials server-side | IMPLEMENTED_VERIFIED | `data/secrets.json` gitignored; refs only in registry |
+| Credentials server-side | IMPLEMENTED_VERIFIED | `data/secrets.json` gitignored |
 | Defect fixture app | IMPLEMENTED_VERIFIED | `fixtures/defect-app/` |
-| Cloud → cloud migration | IMPLEMENTED_VERIFIED | `migrate:export` / `migrate:import`, `docs/CLOUD_TO_CLOUD_MIGRATION.md` |
-| Browser session + readiness | IMPLEMENTED_VERIFIED | `engine/browser-session.mjs`, `l1.readiness.application` |
-| Structured report sections | IMPLEMENTED_VERIFIED | `structured` on report + ReportDetail UI |
-| Targeted retest API | IMPLEMENTED_UNVERIFIED | `POST /api/runs/:id/retest` |
-| Test pack adapters (Playwright, axe, Lighthouse, repo tools) | IMPLEMENTED_VERIFIED | `npm run verify:adapters`; see `docs/TOOLS.md` |
-| ZAP passive / k6 production load | IMPLEMENTED_UNVERIFIED | Disabled by default; manual workflow `.github/workflows/adapter-engines.yml` |
-| Isolated worker processes | IMPLEMENTED_UNVERIFIED | In-process queue; spawn without shell for repo tools |
+| Cloud → cloud migration | IMPLEMENTED_VERIFIED | export/import tooling |
+| Browser session + readiness | IMPLEMENTED_VERIFIED | readiness gate |
+| Structured report sections | IMPLEMENTED_VERIFIED | ReportDetail + tools executed |
+| Targeted retest API | IMPLEMENTED_VERIFIED | Preserves packs + repo path |
+| Test pack adapters | IMPLEMENTED_VERIFIED | `npm run verify:adapters` |
+| ZAP passive client | IMPLEMENTED_VERIFIED | Real ZAP JSON API; blocked unless enabled |
+| Isolated worker processes | IMPLEMENTED_VERIFIED | `server/worker-run.mjs` child per run |
+| Pack settings UI | IMPLEMENTED_VERIFIED | Settings page per-pack toggles |
+| Evidence viewer | IMPLEMENTED_VERIFIED | `/api/files` + `EvidencePreview` |
+| Finding dedupe + tool provenance | IMPLEMENTED_VERIFIED | `dedupeFindings` |
+| Jest + pnpm/yarn audit | IMPLEMENTED_VERIFIED | `jest-repo` + `dependency-audit` adapter |

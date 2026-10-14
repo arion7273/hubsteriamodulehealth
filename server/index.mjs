@@ -17,6 +17,7 @@ import { enqueueRun, cancelRun, getJob, listJobs } from './run-queue.mjs';
 import { scheduleStatus, startScheduler } from './scheduler.mjs';
 import { PACK_DEFINITIONS, packsForInputMode } from '../engine/packs/definitions.mjs';
 import { exportMigrationBundle, importMigrationBundle } from '../scripts/lib/migrate-cloud.mjs';
+import { resolveEvidenceFile } from './evidence-files.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -49,6 +50,13 @@ function requireMigrationAuth(req, res, next) {
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'hubsteriamodulehealth' }));
+
+app.get('/api/files', (req, res) => {
+  const ref = req.query.path;
+  const abs = resolveEvidenceFile(ref);
+  if (!abs) return res.status(404).json({ error: 'file not found or not allowed' });
+  res.sendFile(abs);
+});
 
 app.get('/api/packs', (req, res) => {
   const inputMode = req.query.inputMode ?? 'url';
@@ -188,7 +196,9 @@ app.post('/api/runs/:runId/retest', async (req, res) => {
     appId: prior.appId,
     environment: prior.environment,
     inputMode: prior.inputMode,
-    levels,
+    levels: prior.packsExecuted?.length ? undefined : levels,
+    packs: prior.packsExecuted?.length ? prior.packsExecuted : undefined,
+    repoRoot: prior.meta?.repoRoot ?? req.body?.repoRoot,
     targetUrl: prior.meta?.targetUrl ?? req.body?.targetUrl,
     retestOf: prior.runId,
     retestMode: mode,

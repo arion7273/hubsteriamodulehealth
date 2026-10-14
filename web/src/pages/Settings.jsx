@@ -5,10 +5,12 @@ export default function Settings() {
   const [apps, setApps] = useState([]);
   const [appId, setAppId] = useState('defect-fixture');
   const [settings, setSettings] = useState(null);
+  const [packDefs, setPackDefs] = useState([]);
   const [newApp, setNewApp] = useState({ name: '', url: '' });
 
   useEffect(() => {
     api('/api/registry').then((reg) => setApps(reg.apps));
+    api('/api/packs?inputMode=url').then((d) => setPackDefs(d.packs ?? []));
   }, []);
 
   useEffect(() => {
@@ -27,7 +29,19 @@ export default function Settings() {
     setNewApp({ name: '', url: '' });
   }
 
+  function updatePack(packId, patch) {
+    setSettings({
+      ...settings,
+      packs: {
+        ...settings.packs,
+        [packId]: { ...settings.packs?.[packId], ...patch },
+      },
+    });
+  }
+
   if (!settings) return <p>Loading…</p>;
+
+  const packIds = [...new Set([...Object.keys(settings.packs ?? {}), ...packDefs.map((p) => p.id)])];
 
   return (
     <div className="stack">
@@ -55,6 +69,12 @@ export default function Settings() {
             setSettings({ ...settings, budgets: { ...settings.budgets, timeoutMs: Number(e.target.value) } })
           }
         />
+        <label>Evidence retention (days)</label>
+        <input
+          type="number"
+          value={settings.evidenceRetentionDays ?? 30}
+          onChange={(e) => setSettings({ ...settings, evidenceRetentionDays: Number(e.target.value) })}
+        />
         <label>
           <input
             type="checkbox"
@@ -63,6 +83,51 @@ export default function Settings() {
           />
           Enable schedule (requires app registry schedules + base URL)
         </label>
+
+        <h3>Test packs</h3>
+        <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+          Disable packs, set timeouts, and opt into advanced tools. URL/HTML runs never execute repository tools.
+        </p>
+        {packIds.map((id) => {
+          const def = packDefs.find((p) => p.id === id);
+          const pack = settings.packs?.[id] ?? { enabled: true };
+          return (
+            <div key={id} style={{ borderTop: '1px solid var(--border)', paddingTop: '0.5rem' }}>
+              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={pack.enabled !== false}
+                  onChange={(e) => updatePack(id, { enabled: e.target.checked })}
+                />
+                <strong>{def?.label ?? id}</strong>
+              </label>
+              {def?.description && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--muted)', margin: '0.25rem 0' }}>{def.description}</p>
+              )}
+              {id === 'security' && (
+                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={pack.zapEnabled === true}
+                    onChange={(e) => updatePack(id, { zapEnabled: e.target.checked })}
+                  />
+                  Enable ZAP passive (requires ZAP_API_URL on runner)
+                </label>
+              )}
+              {id === 'load-recovery' && (
+                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.25rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={pack.k6Enabled === true}
+                    onChange={(e) => updatePack(id, { k6Enabled: e.target.checked })}
+                  />
+                  Enable k6 load scenarios (staging only)
+                </label>
+              )}
+            </div>
+          );
+        })}
+
         <button className="primary" type="button" onClick={save}>Save settings</button>
       </div>
 
