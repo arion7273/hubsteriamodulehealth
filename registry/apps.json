@@ -97,6 +97,27 @@
       "filesystemModuleRoot": null
     },
     {
+      "id": "adhoc-url-scan",
+      "name": "Quick URL scan",
+      "description": "Ad-hoc scans from the landing page",
+      "baseUrl": null,
+      "environments": [
+        {
+          "id": "custom",
+          "label": "Custom URL",
+          "baseUrl": null,
+          "mutationsAllowed": false
+        }
+      ],
+      "modules": [],
+      "criticalWorkflows": [],
+      "testAccountRefs": [],
+      "integrations": [],
+      "schedules": { "enabled": false },
+      "budgets": { "pageLimit": 12, "timeoutMs": 45000 },
+      "buildId": null
+    },
+    {
       "id": "defect-fixture",
       "name": "Defect Fixture (internal)",
       "description": "Controlled app with known defects for tester verification",

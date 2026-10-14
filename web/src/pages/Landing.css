@@ -1,0 +1,330 @@
+.landing {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  color: #e8eef8;
+  background: #060a12;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.landing-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+}
+
+.orb-a {
+  width: 420px;
+  height: 420px;
+  background: #2563eb;
+  top: -8%;
+  left: -6%;
+}
+
+.orb-b {
+  width: 360px;
+  height: 360px;
+  background: #7c3aed;
+  bottom: 10%;
+  right: -4%;
+}
+
+.orb-c {
+  width: 280px;
+  height: 280px;
+  background: #0ea5e9;
+  top: 40%;
+  left: 45%;
+  opacity: 0.35;
+}
+
+.grid-glow {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black, transparent);
+}
+
+.landing-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem clamp(1.25rem, 4vw, 3rem);
+}
+
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.logo-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+}
+
+.landing-dash-link {
+  color: #94a8c4;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 168, 196, 0.25);
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.landing-dash-link:hover {
+  color: #e8eef8;
+  border-color: rgba(148, 168, 196, 0.5);
+  text-decoration: none;
+}
+
+.landing-hero {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(2rem, 8vh, 4rem) clamp(1.25rem, 4vw, 2rem) 4rem;
+  text-align: center;
+}
+
+.landing-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: #7dd3fc;
+  margin-bottom: 1rem;
+}
+
+.landing-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0 0 1rem;
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, #7dd3fc, #c4b5fd 45%, #f9a8d4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.landing-sub {
+  color: #94a8c4;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin: 0 auto 1.75rem;
+  max-width: 34rem;
+}
+
+.landing-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.landing-pill {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #b8c9e0;
+}
+
+.landing-card {
+  text-align: left;
+  background: rgba(12, 18, 30, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 1.35rem 1.35rem 1.5rem;
+}
+
+.landing-url-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a8c4;
+  margin-bottom: 0.5rem;
+}
+
+.landing-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .landing-input-row {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.landing-input-row input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 168, 196, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  color: #f1f5f9;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+}
+
+.landing-input-row input:focus {
+  outline: 2px solid rgba(56, 189, 248, 0.5);
+  outline-offset: 2px;
+}
+
+.landing-scan-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 0.85rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #041018;
+  background: linear-gradient(135deg, #38bdf8, #818cf8);
+  white-space: nowrap;
+}
+
+.landing-scan-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.landing-error {
+  color: #fca5a5;
+  font-size: 0.88rem;
+  margin: 0.75rem 0 0;
+}
+
+.scan-stage {
+  margin-top: 1.25rem;
+  overflow: hidden;
+}
+
+.scan-viewport {
+  border-radius: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: linear-gradient(180deg, #0c1424, #080d18);
+  overflow: hidden;
+}
+
+.scan-chrome {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.scan-chrome span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.scan-body {
+  position: relative;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scan-line {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.9);
+  opacity: 0.9;
+}
+
+.scan-pulse {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(129, 140, 248, 0.4);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.scan-status {
+  position: absolute;
+  bottom: 14px;
+  font-size: 0.82rem;
+  color: #7dd3fc;
+  margin: 0;
+}
+
+.scan-progress-track {
+  margin-top: 0.75rem;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.scan-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #a78bfa);
+  border-radius: 4px;
+}
+
+.scan-run-id {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  color: #64748b;
+  font-family: ui-monospace, monospace;
+}
+
+.scan-done {
+  margin-top: 1rem;
+  color: #6ee7b7;
+  text-align: center;
+}
+
+.landing-foot {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 2rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
