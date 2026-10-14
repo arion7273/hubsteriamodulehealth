@@ -1,4 +1,5 @@
 {
+  "$comment": "Used when Vercel Root Directory is web/. Repo-root deploys use /vercel.json with vercel-*.mjs scripts.",
   "framework": "vite",
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
