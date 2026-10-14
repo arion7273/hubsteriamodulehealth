@@ -2,6 +2,28 @@ import { chromium } from 'playwright';
 import { createFinding } from '../findings.mjs';
 import { originFromUrl } from '../security/url-guard.mjs';
 
+/** Wait for SPAs / client bundles to paint readable text. */
+async function waitForVisibleBodyText(page, maxWaitMs) {
+  const start = Date.now();
+  let text = '';
+  while (Date.now() - start < maxWaitMs) {
+    text = (await page.locator('body').innerText().catch(() => '')).trim();
+    if (text.length > 0) break;
+    await page.waitForTimeout(300);
+  }
+  return { text, waitedMs: Date.now() - start };
+}
+
+async function detectClientShell(page) {
+  return page.evaluate(() => {
+    const root =
+      document.querySelector('#root, #app, [data-testid="root"], main') ?? document.body;
+    const htmlLen = root?.innerHTML?.length ?? 0;
+    const childCount = root?.children?.length ?? 0;
+    return { htmlLen, childCount };
+  });
+}
+
 /**
  * @param {object} ctx
  */
@@ -80,7 +102,8 @@ export async function runLevel1QuickHealth(ctx) {
       }
       await page.setContent(htmlSnapshot.html, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
     } else {
-      const response = await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+      const response = await page.goto(targetUrl, { waitUntil: 'load', timeout: timeoutMs });
+      await page.waitForLoadState('networkidle', { timeout: Math.min(12_000, timeoutMs) }).catch(() => {});
       if (!response) {
         findings.push(
           createFinding({
@@ -131,7 +154,10 @@ export async function runLevel1QuickHealth(ctx) {
     }
 
     const title = await page.title();
-    const bodyText = (await page.locator('body').innerText().catch(() => '')).trim();
+    const contentWaitMs = Math.min(10_000, Math.floor(timeoutMs / 3));
+    const { text: bodyText, waitedMs } = await waitForVisibleBodyText(page, contentWaitMs);
+    const shell = await detectClientShell(page);
+
     findings.push(
       createFinding({
         checkId: 'l1.content.title',
@@ -145,17 +171,47 @@ export async function runLevel1QuickHealth(ctx) {
         actual: title || '(empty)',
       }),
     );
+
+    let blankStatus = bodyText.length > 0 ? 'pass' : 'fail';
+    let blankSeverity = bodyText.length > 0 ? 'info' : 'high';
+    let blankDetail = `length=${bodyText.length}, waitedMs=${waitedMs}`;
+    let blankRemediation = null;
+
+    if (bodyText.length === 0 && shell.htmlLen > 80 && shell.childCount > 0) {
+      blankStatus = 'blocked';
+      blankSeverity = 'medium';
+      blankDetail += `; client shell htmlLen=${shell.htmlLen} but no visible text (auth gate, bot block, or slow SPA)`;
+      blankRemediation = {
+        summary:
+          'Page returned a client shell without readable text. Use authenticated test mode, increase timeout, or verify the URL in a logged-in browser.',
+        steps: [
+          'Confirm the URL is reachable without login for anonymous health checks',
+          'If staff-only, configure test account auth (Phase B) before expecting content',
+        ],
+      };
+    } else if (bodyText.length === 0 && title) {
+      blankRemediation = {
+        summary:
+          'Title loaded but body stayed empty after waiting. Common for SPAs that need auth or block headless browsers.',
+      };
+    }
+
     findings.push(
       createFinding({
         checkId: 'l1.content.blank-screen',
         appId,
         environment,
         level: 1,
-        status: bodyText.length > 0 ? 'pass' : 'fail',
-        severity: bodyText.length > 0 ? 'info' : 'high',
+        status: blankStatus,
+        severity: blankSeverity,
         title: 'Page has visible text content',
-        expected: 'Body text length > 0',
-        actual: `length=${bodyText.length}`,
+        expected: 'Body text length > 0 after load wait',
+        actual: blankDetail,
+        remediation: blankRemediation,
+        userImpact:
+          blankStatus === 'fail'
+            ? 'Users may see a blank screen or content that never appears.'
+            : null,
       }),
     );
 
