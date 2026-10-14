@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "vexp": {
+      "type": "stdio",
+      "command": "/usr/local/bin/node",
+      "args": [
+        "/Users/josephfelipe/.cursor/extensions/vexp.vexp-vscode-3.3.2-darwin-arm64/dist/mcp-server.cjs"
+      ],
+      "env": {
+        "VEXP_WORKSPACE": "/Users/josephfelipe/Documents/GitHub/hubsteriamodulehealth"
+      }
+    }
+  }
+}
