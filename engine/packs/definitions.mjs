@@ -26,19 +26,20 @@ export const PACK_DEFINITIONS = {
     label: 'Code Quality',
     description: 'ESLint, TypeScript, Vitest using target repo config',
     inputModes: ['repository'],
-    adapters: ['eslint', 'typescript', 'vitest', 'semgrep'],
+    adapters: ['eslint', 'typescript', 'vitest', 'jest', 'semgrep'],
   },
   security: {
     label: 'Security',
     description: 'Gitleaks, npm audit, Semgrep, scoped ZAP passive',
     inputModes: ['repository', 'url'],
-    adapters: ['gitleaks', 'npm-audit', 'semgrep', 'zap'],
+    adapters: ['gitleaks', 'dependency-audit', 'semgrep', 'zap'],
   },
   'load-recovery': {
     label: 'Load & Recovery',
     description: 'k6 scenarios and recovery recipes (staging, opt-in)',
     inputModes: ['url'],
-    adapters: ['k6'],
+    adapters: ['k6', 'playwright-live'],
+    playwrightLevels: [5],
   },
 };
 

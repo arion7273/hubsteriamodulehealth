@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PACK_DEFINITIONS } from '../engine/packs/definitions.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = path.join(__dirname, '../data');
@@ -9,10 +10,27 @@ export const SETTINGS_DIR = path.join(DATA_DIR, 'settings');
 export const SECRETS_PATH = path.join(DATA_DIR, 'secrets.json');
 export const REGISTRY_USER_PATH = path.join(DATA_DIR, 'registry.apps.json');
 
+function defaultPackSettings() {
+  const packs = {};
+  for (const [id, def] of Object.entries(PACK_DEFINITIONS)) {
+    packs[id] = {
+      enabled: true,
+      label: def.label,
+      timeoutMs: null,
+      severityThreshold: 'low',
+    };
+  }
+  packs.security = { ...packs.security, zapEnabled: false, gitleaksEnabled: true };
+  packs['load-recovery'] = { ...packs['load-recovery'], k6Enabled: false };
+  return packs;
+}
+
 export function ensureDataDirs() {
   fs.mkdirSync(RUNS_DIR, { recursive: true });
   fs.mkdirSync(SETTINGS_DIR, { recursive: true });
   fs.mkdirSync(path.join(DATA_DIR, 'schedules'), { recursive: true });
+  fs.mkdirSync(path.join(DATA_DIR, 'worker'), { recursive: true });
+  fs.mkdirSync(path.join(DATA_DIR, 'artifacts'), { recursive: true });
 }
 
 export function loadJson(filePath, fallback) {
@@ -64,7 +82,7 @@ export function getRun(runId) {
 }
 
 export function loadModuleSettings(appId) {
-  return loadJson(path.join(SETTINGS_DIR, `${appId}.json`), {
+  const defaults = {
     enabledChecks: {},
     severityThreshold: 'low',
     budgets: {},
@@ -73,7 +91,14 @@ export function loadModuleSettings(appId) {
     timeouts: {},
     schedule: { enabled: false },
     evidenceRetentionDays: 30,
-  });
+    packs: defaultPackSettings(),
+  };
+  const saved = loadJson(path.join(SETTINGS_DIR, `${appId}.json`), defaults);
+  return {
+    ...defaults,
+    ...saved,
+    packs: { ...defaults.packs, ...(saved.packs ?? {}) },
+  };
 }
 
 export function saveModuleSettings(appId, settings) {

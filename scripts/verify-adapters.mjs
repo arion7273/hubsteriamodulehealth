@@ -153,6 +153,46 @@ async function main() {
     registry,
     null,
   );
+  const loadRecovery = await executeRun(
+    {
+      runId: 'adapter_load',
+      appId: 'defect-fixture',
+      environment: 'local',
+      inputMode: 'url',
+      packs: ['load-recovery'],
+      targetUrl: 'http://127.0.0.1:4177/fixtures/defect-app/index.html',
+    },
+    registry,
+    null,
+  );
+  if (!loadRecovery.findings.some((f) => f.checkId === 'l5.recovery.restore' && f.status === 'pass')) {
+    failures.push('load-recovery: expected recovery restore pass on defect fixture');
+  }
+  if (!loadRecovery.tools?.some((t) => t.tool === 'k6' && t.status === 'blocked')) {
+    failures.push('load-recovery: expected k6 blocked when disabled');
+  }
+
+  const jestRepoPath = path.join(ROOT, 'fixtures/jest-repo');
+  spawnSync('npm', ['install', '--ignore-scripts'], { cwd: jestRepoPath, stdio: 'inherit' });
+  const jestRun = await executeRun(
+    {
+      runId: 'adapter_jest',
+      appId: 'adapter-fixture-repo',
+      environment: 'local',
+      inputMode: 'repository',
+      packs: ['code-quality'],
+      repoRoot: jestRepoPath,
+    },
+    registry,
+    null,
+  );
+  if (!jestRun.findings.some((f) => f.checkId === 'jest.summary' && f.status === 'pass')) {
+    failures.push('code-quality: expected Jest pass on jest-repo fixture');
+  }
+  if (!jestRun.findings.some((f) => f.checkId === 'vitest.preflight' && f.status === 'blocked')) {
+    failures.push('code-quality: expected Vitest blocked on jest-only repo');
+  }
+
   if (!(await commandExists('gitleaks', ['version']))) {
     if (!security.findings.some((f) => f.checkId === 'gitleaks.preflight' && f.status === 'blocked')) {
       failures.push('security: expected gitleaks blocked when binary missing');
@@ -183,6 +223,22 @@ async function main() {
   );
   if (!htmlMode.findings.some((f) => f.status === 'not_applicable' || f.status === 'blocked')) {
     failures.push('HTML mode: expected repository tools not applicable/blocked');
+  }
+
+  const { enqueueRun } = await import('../server/run-queue.mjs');
+  const job = await enqueueRun({
+    appId: 'defect-fixture',
+    environment: 'local',
+    inputMode: 'url',
+    packs: ['quick-health'],
+    targetUrl: 'http://127.0.0.1:4177/fixtures/defect-app/index.html',
+  });
+  for (let i = 0; i < 120; i++) {
+    if (job.status === 'completed' || job.status === 'failed') break;
+    await sleep(500);
+  }
+  if (job.status !== 'completed') {
+    failures.push(`worker queue: expected completed job, got ${job.status} ${job.message ?? ''}`);
   }
 
   if (startedServer && server) server.kill('SIGTERM');

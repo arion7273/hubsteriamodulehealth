@@ -1,13 +1,16 @@
-# Test packs (selectable)
+# Selectable test packs
 
-Packs are enabled via `runRequest.packs` (future UI). Current implementation:
+Packs are defined in `definitions.mjs` and selected via `runRequest.packs` or the Run test UI.
 
-| Pack | ID | Status |
-|------|-----|--------|
-| Render & navigation | `render-nav` | Partial — core checks in Level 1 readiness + links |
-| Forms & persistence | `forms` | NOT_STARTED — requires auth + staging |
-| Module settings | `settings` | NOT_STARTED |
-| Auth & permissions | `auth` | NOT_STARTED |
-| Responsive & a11y | `quality` | Level 4 partial (axe, overflow) |
-| Workflows | `workflows` | Level 3 templates only |
-| Recovery & integrations | `recovery` | Level 5 stub |
+| Pack ID | Label | Input modes |
+|---------|-------|-------------|
+| `quick-health` | Quick Health | url, html |
+| `ui-a11y` | UI & Accessibility | url, html |
+| `workflow` | Workflow | url |
+| `code-quality` | Code Quality | repository |
+| `security` | Security | repository, url (ZAP) |
+| `load-recovery` | Load & Recovery | url |
+
+Execution flows through `engine/packs/executor.mjs` into tool adapters under `engine/adapters/`. Runs execute in an isolated child process (`server/worker-run.mjs`).
+
+Per-app pack toggles and advanced tool flags live in `data/settings/<appId>.json` (editable in Settings UI).

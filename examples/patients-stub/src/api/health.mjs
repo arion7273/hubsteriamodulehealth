@@ -1,1 +1,3 @@
-export async function getHealth() { return { ok: false, reason: "stub not wired" }; }
+export async function getHealth() {
+  return { ok: true, module: 'patients-stub' };
+}

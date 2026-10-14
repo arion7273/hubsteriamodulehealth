@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import EvidencePreview from '../components/EvidencePreview.jsx';
 
 function FindingRow({ f, runId, expanded, setExpanded, onRetest }) {
   async function copyPrompt() {
@@ -33,9 +34,12 @@ function FindingRow({ f, runId, expanded, setExpanded, onRetest }) {
         )}
       </div>
       {expanded === f.id && (
-        <pre style={{ fontSize: '0.75rem', overflow: 'auto', background: '#121a26', padding: '0.75rem' }}>
-          {JSON.stringify(f, null, 2)}
-        </pre>
+        <>
+          <EvidencePreview evidence={f.evidence} />
+          <pre style={{ fontSize: '0.75rem', overflow: 'auto', background: '#121a26', padding: '0.75rem' }}>
+            {JSON.stringify(f, null, 2)}
+          </pre>
+        </>
       )}
     </div>
   );

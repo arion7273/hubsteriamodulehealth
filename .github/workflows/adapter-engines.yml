@@ -23,3 +23,7 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/tools/install.sh | sh -s -- -b /usr/local/bin
           pip install semgrep
       - run: npm run verify:adapters
+      - if: inputs.install_security_tools
+        run: |
+          docker pull ghcr.io/zaproxy/zaproxy:stable
+          VERIFY_ZAP=1 npm run verify:zap

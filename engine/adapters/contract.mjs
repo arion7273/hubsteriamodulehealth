@@ -63,7 +63,14 @@ export function toFinding(r, ctx) {
     fix: r.fix,
     userImpact: r.userImpact,
     acceptanceCriteria: r.acceptanceCriteria,
-    meta: { tool: r.tool, toolVersion: r.toolVersion, pack: r.pack, rulesetVersion: r.rulesetVersion },
+    meta: {
+      tool: r.tool,
+      toolVersion: r.toolVersion,
+      pack: r.pack,
+      rulesetVersion: r.rulesetVersion,
+      tools: r.tool ? [r.tool] : [],
+    },
+    durationMs: r.durationMs,
   });
 }
 
