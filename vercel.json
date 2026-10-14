@@ -1,5 +1,7 @@
 {
-  "buildCommand": "npm run build:web",
+  "$comment": "Static UI only — scan API runs on a Node host (npm start), not on Vercel.",
+  "installCommand": "npm install --prefix web",
+  "buildCommand": "npm run build --prefix web",
   "outputDirectory": "web/dist",
   "framework": null,
   "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]

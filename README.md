@@ -83,6 +83,8 @@ Full runbook: [docs/CLOUD_TO_CLOUD_MIGRATION.md](docs/CLOUD_TO_CLOUD_MIGRATION.m
 
 ## Vercel (UI only)
 
+`vercel.json` runs **`npm install` / `npm run build` only under `web/`** so the root scan engine (Playwright, Lighthouse, etc.) is not installed on Vercel.
+
 `hubsteriamodulehealth.vercel.app` serves the **static React build**. It does **not** run Playwright or `/api/*` unless you point the UI at a real API:
 
 1. Host the full app somewhere that runs `npm start` (VM, Railway, Fly.io, etc.).
