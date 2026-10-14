@@ -83,12 +83,11 @@ Full runbook: [docs/CLOUD_TO_CLOUD_MIGRATION.md](docs/CLOUD_TO_CLOUD_MIGRATION.m
 
 ## Vercel (UI only)
 
-**Vercel Root Directory** can be **`web`** (recommended) or the **repo root** — both are supported.
+**Vercel Root Directory must be `web`** (Project Settings → General). Deploy config is only **`web/vercel.json`**: `npm ci` + `vite build` → `dist` (no Playwright).
 
-- **`web`**: `web/vercel.json` runs `npm ci` + `vite build` → `dist` (no Playwright).
-- **Repo root**: root `vercel.json` runs `scripts/vercel-install.mjs` / `scripts/vercel-build.mjs`, which resolve `web/` from either layout.
+There is **no** repo-root `vercel.json` — a root config with `node scripts/…` breaks when Vercel’s working directory is already `web/`.
 
-`web/package.json` includes `build:web` and `vercel-build` aliases for dashboard overrides. Shell wrappers `scripts/vercel-*.sh` delegate to the same Node scripts.
+`web/package.json` includes `build:web` and `vercel-build` if you use a dashboard Build Command override.
 
 `hubsteriamodulehealth.vercel.app` serves the **static React build**. It does **not** run Playwright or `/api/*` unless you point the UI at a real API:
 
