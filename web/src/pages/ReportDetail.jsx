@@ -79,9 +79,26 @@ export default function ReportDetail() {
         <p>{report.headline}</p>
         <p style={{ color: 'var(--muted)' }}>{report.comparisonNote}</p>
         <p>
-          Environment: {report.environment} · URL: {report.meta?.targetUrl ?? '—'} · Duration:{' '}
+          Environment: {report.environment} · Input: {report.inputMode ?? 'url'} · URL:{' '}
+          {report.meta?.targetUrl ?? '—'} · Duration:{' '}
           {report.meta?.durationMs ? `${report.meta.durationMs}ms` : '—'}
         </p>
+        {(report.packsExecuted?.length ?? 0) > 0 && (
+          <p>Packs: {report.packsExecuted.join(', ')}</p>
+        )}
+        {(report.tools?.length ?? 0) > 0 && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <h4 style={{ margin: '0 0 0.35rem' }}>Tools executed</h4>
+            <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
+              {report.tools.map((t) => (
+                <li key={`${t.tool}-${t.pack}`}>
+                  {t.tool} {t.version ? `(${t.version})` : ''} · pack {t.pack} · {t.status}
+                  {t.reason ? ` — ${t.reason}` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <p>
           Pass {counts.pass ?? 0} · Fail {counts.fail ?? 0} · Blocked {counts.blocked ?? 0} · Not tested{' '}
           {counts.not_tested ?? 0} · N/A {counts.not_applicable ?? 0}

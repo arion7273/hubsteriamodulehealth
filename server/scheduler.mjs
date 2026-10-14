@@ -22,11 +22,18 @@ export function startScheduler() {
         const last = lastScheduled.get(key) ?? 0;
         if (now - last < 60_000) return;
         lastScheduled.set(key, now);
+
+        const rotation = app.schedules.packRotation ?? [];
+        const dayIndex = new Date().getDay();
+        const rotated = rotation.length ? rotation[dayIndex % rotation.length] : null;
+        const packs = ['quick-health', ...(rotated ? [rotated] : [])];
+
         enqueueRun({
           appId: app.id,
           environment: env.id,
-          levels: [1],
           inputMode: 'url',
+          packs: app.schedules.usePacks ? packs : undefined,
+          levels: app.schedules.usePacks ? undefined : [1],
           scheduled: true,
         });
       },
@@ -34,6 +41,30 @@ export function startScheduler() {
     );
     task.start();
     tasks.push(task);
+
+    if (app.repositoryPath && app.schedules.weeklyRepoCron) {
+      const repoTask = cron.schedule(
+        app.schedules.weeklyRepoCron,
+        () => {
+          const key = `${app.id}:repo`;
+          const now = Date.now();
+          const last = lastScheduled.get(key) ?? 0;
+          if (now - last < 60_000) return;
+          lastScheduled.set(key, now);
+          enqueueRun({
+            appId: app.id,
+            environment: env.id,
+            inputMode: 'repository',
+            repoRoot: app.repositoryPath,
+            packs: ['code-quality', 'security'],
+            scheduled: true,
+          });
+        },
+        { timezone: registry.global?.timezone ?? 'America/New_York', scheduled: false },
+      );
+      repoTask.start();
+      tasks.push(repoTask);
+    }
   }
 }
 
@@ -48,8 +79,10 @@ export function scheduleStatus() {
     appId: app.id,
     enabled: !!app.schedules?.enabled,
     dailyHealthCron: app.schedules?.dailyHealthCron ?? null,
+    weeklyRepoCron: app.schedules?.weeklyRepoCron ?? null,
+    packRotation: app.schedules?.packRotation ?? [],
     note: app.schedules?.enabled
-      ? 'Active when baseUrl is configured for an environment'
+      ? 'Daily quick-health; optional rotating packs and weekly repo scans when configured'
       : 'Disabled until targets and accounts are configured',
   }));
 }

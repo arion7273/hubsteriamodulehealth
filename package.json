@@ -15,9 +15,10 @@
     "start": "node server/index.mjs",
     "dev:server": "node server/index.mjs",
     "verify:platform": "node scripts/verify-platform.mjs",
+    "verify:adapters": "node scripts/verify-adapters.mjs",
     "migrate:export": "node scripts/migrate-cloud-export.mjs",
     "migrate:import": "node scripts/migrate-cloud-import.mjs",
-    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform"
+    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform; npm run verify:adapters"
   },
   "engines": {
     "node": ">=20"
@@ -26,7 +27,10 @@
     "@axe-core/playwright": "^4.10.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "lighthouse": "^12.2.1",
     "node-cron": "^3.0.3",
-    "playwright": "^1.49.1"
+    "pixelmatch": "^6.0.0",
+    "playwright": "^1.49.1",
+    "pngjs": "^7.0.0"
   }
 }

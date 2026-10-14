@@ -122,6 +122,23 @@
       "buildId": null
     },
     {
+      "id": "adapter-fixture-repo",
+      "name": "Adapter fixture repository",
+      "description": "Controlled repo with lint, type, secret, and semgrep fixtures",
+      "repositoryPath": "fixtures/sample-repo",
+      "baseUrl": null,
+      "environments": [
+        { "id": "local", "label": "Fixture checkout", "baseUrl": null, "mutationsAllowed": false }
+      ],
+      "modules": [],
+      "criticalWorkflows": [],
+      "testAccountRefs": [],
+      "integrations": [],
+      "schedules": { "enabled": false },
+      "budgets": { "eslintPaths": ["src"], "semgrepConfig": null },
+      "buildId": "adapter-fixture"
+    },
+    {
       "id": "defect-fixture",
       "name": "Defect Fixture (internal)",
       "description": "Controlled app with known defects for tester verification",
@@ -143,7 +160,10 @@
       "testAccountRefs": [],
       "integrations": [],
       "schedules": { "enabled": false },
-      "budgets": { "pageLimit": 12, "timeoutMs": 30000 },
+      "budgets": { "pageLimit": 12, "timeoutMs": 30000, "visualMaxDiffPixels": 50 },
+      "visualBaselines": {
+        "http://127.0.0.1:4177/fixtures/defect-app/visual-regression.html": "fixtures/defect-app/baselines/visual-regression.png"
+      },
       "buildId": "fixture-1"
     }
   ]

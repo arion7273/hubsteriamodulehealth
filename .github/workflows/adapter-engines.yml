@@ -1,0 +1,25 @@
+name: Adapter engines (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      install_security_tools:
+        description: Install gitleaks and semgrep on runner
+        type: boolean
+        default: false
+
+jobs:
+  adapters:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: npx playwright install chromium
+      - if: inputs.install_security_tools
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/tools/install.sh | sh -s -- -b /usr/local/bin
+          pip install semgrep
+      - run: npm run verify:adapters
