@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../api.js';
+import { useRegistry } from '../hooks/useRegistry.js';
 import './Landing.css';
 
 const SCAN_STEPS = [
@@ -45,6 +46,7 @@ function localQuickPicks() {
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { apiOnline } = useRegistry();
   const rootRef = useRef(null);
   const orbRefs = useRef([]);
   const [url, setUrl] = useState('');
@@ -129,6 +131,13 @@ export default function Landing() {
     }
     if (parsed.protocol === 'https:' && isLocalHost(parsed.hostname)) {
       setError('Local apps usually use http:// — try http://localhost with your port.');
+      return;
+    }
+
+    if (apiOnline === false) {
+      setError(
+        'Scan server not available on this host. Run npm start on a VM, or set VITE_API_BASE on Vercel to your API URL.',
+      );
       return;
     }
 

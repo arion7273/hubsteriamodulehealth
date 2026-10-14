@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
@@ -22,6 +23,13 @@ const HOST = process.env.HOST ?? '127.0.0.1';
 
 ensureDataDirs();
 const app = express();
+const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean);
+app.use(
+  cors({
+    origin: corsOrigins?.length ? corsOrigins : true,
+    methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+  }),
+);
 app.use(express.json({ limit: '2mb' }));
 
 app.use('/fixtures', express.static(path.join(ROOT, 'fixtures')));

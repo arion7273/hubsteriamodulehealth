@@ -70,6 +70,17 @@ Stored under `data/runs/`. Each report includes:
 
 See `docs/IMPLEMENTATION_LEDGER.md`.
 
+## Vercel (UI only)
+
+`hubsteriamodulehealth.vercel.app` serves the **static React build**. It does **not** run Playwright or `/api/*` unless you point the UI at a real API:
+
+1. Host the full app somewhere that runs `npm start` (VM, Railway, Fly.io, etc.).
+2. In Vercel project settings, set **`VITE_API_BASE`** to that API origin (e.g. `https://module-health-api.example.com`).
+3. On the API host, set **`CORS_ORIGINS`** to your Vercel URL (e.g. `https://hubsteriamodulehealth.vercel.app`).
+4. Redeploy both.
+
+Without this, Run test shows empty API data and **Run** cannot execute scans.
+
 ## Operating limits
 
 - Playwright runs on the server host; long jobs use an in-process queue (`maxConcurrentRuns`).

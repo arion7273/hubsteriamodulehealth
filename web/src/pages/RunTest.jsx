@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { useRegistry } from '../hooks/useRegistry.js';
+import BackendBanner from '../components/BackendBanner.jsx';
 
 const LEVELS = [
   { id: 1, label: 'Level 1 — Quick health' },
@@ -12,49 +14,71 @@ const LEVELS = [
 
 export default function RunTest() {
   const [params] = useSearchParams();
-  const [apps, setApps] = useState([]);
-  const [appId, setAppId] = useState(params.get('app') ?? 'defect-fixture');
-  const [environment, setEnvironment] = useState('local');
+  const { apps, apiOnline } = useRegistry();
+  const [appId, setAppId] = useState(params.get('app') ?? 'adhoc-url-scan');
+  const [environment, setEnvironment] = useState('custom');
   const [inputMode, setInputMode] = useState('url');
   const [targetUrl, setTargetUrl] = useState('');
   const [html, setHtml] = useState('');
   const [levels, setLevels] = useState([1]);
   const [job, setJob] = useState(null);
   const [polling, setPolling] = useState(false);
+  const [runError, setRunError] = useState('');
 
   useEffect(() => {
-    api('/api/registry').then((reg) => {
-      setApps(reg.apps);
-      const app = reg.apps.find((a) => a.id === appId);
-      const env = app?.environments?.find((e) => e.id === environment);
-      if (!targetUrl && env?.baseUrl) setTargetUrl(env.baseUrl);
-    });
-  }, [appId, environment]);
+    if (!apps.length) return;
+    const app = apps.find((a) => a.id === appId);
+    const env = app?.environments?.find((e) => e.id === environment);
+    if (!targetUrl && env?.baseUrl) setTargetUrl(env.baseUrl);
+  }, [apps, appId, environment]);
 
   function toggleLevel(id) {
     setLevels((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].sort()));
   }
 
   async function startRun() {
+    setRunError('');
+    if (apiOnline === false) {
+      setRunError('Scan server is not connected. Deploy the API or set VITE_API_BASE (see banner above).');
+      return;
+    }
+    if (inputMode === 'url' && !targetUrl?.trim()) {
+      setRunError('Enter a target URL.');
+      return;
+    }
+    const effectiveAppId =
+      appId && apps.some((a) => a.id === appId) ? appId : 'adhoc-url-scan';
     setPolling(true);
-    const body = {
-      appId,
-      environment,
-      inputMode,
-      levels: levels.length ? levels : [1],
-      targetUrl: inputMode === 'url' ? targetUrl : undefined,
-      htmlSnapshot: inputMode === 'html' ? { html } : undefined,
-    };
-    const { runId } = await api('/api/runs', { method: 'POST', body: JSON.stringify(body) });
-    setJob({ runId, status: 'queued' });
-    const interval = setInterval(async () => {
-      const j = await api(`/api/jobs/${runId}`);
-      setJob(j);
-      if (j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled') {
-        clearInterval(interval);
-        setPolling(false);
-      }
-    }, 500);
+    try {
+      const body = {
+        appId: effectiveAppId,
+        environment: effectiveAppId === 'adhoc-url-scan' ? 'custom' : environment,
+        inputMode,
+        levels: levels.length ? levels : [1],
+        targetUrl: inputMode === 'url' ? targetUrl.trim() : undefined,
+        htmlSnapshot: inputMode === 'html' ? { html } : undefined,
+      };
+      const { runId } = await api('/api/runs', { method: 'POST', body: JSON.stringify(body) });
+      setJob({ runId, status: 'queued' });
+      const interval = setInterval(async () => {
+        try {
+          const j = await api(`/api/jobs/${runId}`);
+          setJob(j);
+          if (j.status === 'completed' || j.status === 'failed' || j.status === 'cancelled') {
+            clearInterval(interval);
+            setPolling(false);
+            if (j.status === 'failed') setRunError(j.message || j.error || 'Run failed');
+          }
+        } catch (e) {
+          clearInterval(interval);
+          setPolling(false);
+          setRunError(e.message);
+        }
+      }, 500);
+    } catch (e) {
+      setPolling(false);
+      setRunError(e.message || 'Could not start run');
+    }
   }
 
   async function cancel() {
@@ -68,6 +92,8 @@ export default function RunTest() {
       <p style={{ color: 'var(--muted)' }}>
         Choose app → environment / input → scope → levels. HTML mode: layout, links, a11y on snapshot only — not backend/auth.
       </p>
+
+      <BackendBanner apiOnline={apiOnline} />
 
       <div className="card stack">
         <label>Application</label>
@@ -110,8 +136,14 @@ export default function RunTest() {
           </label>
         ))}
 
+        {runError && (
+          <p role="alert" style={{ color: '#fca5a5', margin: 0 }}>{runError}</p>
+        )}
+
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button className="primary" type="button" disabled={polling} onClick={startRun}>Run</button>
+          <button className="primary" type="button" disabled={polling || apiOnline !== true} onClick={startRun}>
+            Run
+          </button>
           {job?.runId && polling && (
             <button type="button" onClick={cancel}>Cancel</button>
           )}
