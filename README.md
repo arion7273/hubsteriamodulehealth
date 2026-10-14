@@ -11,7 +11,9 @@ npm run build:web
 npm start
 ```
 
-Open **http://127.0.0.1:4177** — overview, run test, reports, schedules, per-app settings.
+Open **http://localhost:4177** (or **http://127.0.0.1:4177**) — landing URL scan, then dashboard at `/overview`.
+
+**Localhost scans:** `localRunnerEnabled` is on in `registry/apps.json`. Use `http://localhost:PORT` (not `https`) for local apps. The landing page includes localhost shortcuts and picks `http://` automatically for `localhost` / `127.0.0.1`.
 
 ### CLI (no UI)
 

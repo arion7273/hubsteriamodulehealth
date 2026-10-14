@@ -170,6 +170,32 @@
   margin-bottom: 0.5rem;
 }
 
+.landing-local-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.landing-local-chip {
+  font-size: 0.72rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  background: rgba(56, 189, 248, 0.08);
+  color: #bae6fd;
+  cursor: pointer;
+}
+
+.landing-local-chip:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.landing-local-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .landing-input-row {
   display: flex;
   flex-direction: column;

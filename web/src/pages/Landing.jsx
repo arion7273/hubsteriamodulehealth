@@ -14,11 +14,33 @@ const SCAN_STEPS = [
   'Building health report…',
 ];
 
+function isLocalHost(host) {
+  const h = host.toLowerCase();
+  return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+}
+
 function normalizeUrl(raw) {
   const t = raw.trim();
   if (!t) return '';
-  if (!/^https?:\/\//i.test(t)) return `https://${t}`;
-  return t;
+  if (/^https?:\/\//i.test(t)) return t;
+  const bare = t.replace(/^\/\//, '');
+  if (/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(bare)) {
+    return `http://${bare}`;
+  }
+  return `https://${bare}`;
+}
+
+function localQuickPicks() {
+  const port = window.location.port || '4177';
+  return [
+    {
+      label: 'Defect fixture (demo)',
+      url: `http://127.0.0.1:${port}/fixtures/defect-app/index.html`,
+    },
+    { label: 'This UI', url: `http://localhost:${port}/` },
+    { label: 'Care (local)', url: 'http://localhost:3000' },
+    { label: 'Guardian (local)', url: 'http://localhost:3003' },
+  ];
 }
 
 export default function Landing() {
@@ -98,10 +120,15 @@ export default function Landing() {
       setError('Enter a valid URL to scan.');
       return;
     }
+    let parsed;
     try {
-      new URL(targetUrl);
+      parsed = new URL(targetUrl);
     } catch {
       setError('That URL does not look valid.');
+      return;
+    }
+    if (parsed.protocol === 'https:' && isLocalHost(parsed.hostname)) {
+      setError('Local apps usually use http:// — try http://localhost with your port.');
       return;
     }
 
@@ -199,12 +226,25 @@ export default function Landing() {
           transition={{ duration: 0.4 }}
         >
           <label className="landing-url-label" htmlFor="scan-url">Application URL</label>
+          <div className="landing-local-chips" role="group" aria-label="Localhost shortcuts">
+            {localQuickPicks().map((pick) => (
+              <button
+                key={pick.url}
+                type="button"
+                className="landing-local-chip"
+                disabled={phase === 'running'}
+                onClick={() => setUrl(pick.url)}
+              >
+                {pick.label}
+              </button>
+            ))}
+          </div>
           <div className="landing-input-row">
             <motion.input
               id="scan-url"
               type="url"
               inputMode="url"
-              placeholder="https://your-app.example.com"
+              placeholder="http://localhost:3000 or https://your-app.example.com"
               value={url}
               onChange={(ev) => setUrl(ev.target.value)}
               disabled={phase === 'running'}

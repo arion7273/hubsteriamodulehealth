@@ -18,6 +18,7 @@ import { scheduleStatus, startScheduler } from './scheduler.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT ?? 4177);
+const HOST = process.env.HOST ?? '127.0.0.1';
 
 ensureDataDirs();
 const app = express();
@@ -140,6 +141,9 @@ app.get('*', (req, res, next) => {
 
 startScheduler();
 
-app.listen(PORT, '127.0.0.1', () => {
+app.listen(PORT, HOST, () => {
   console.log(`HubsteriaModuleHealth server http://127.0.0.1:${PORT}`);
+  if (HOST === '0.0.0.0') {
+    console.log(`  Also reachable at http://localhost:${PORT}`);
+  }
 });
