@@ -26,8 +26,15 @@ async function waitForServer(url, attempts = 40) {
 }
 
 async function main() {
-  const server = spawn('node', ['server/index.mjs'], { cwd: ROOT, stdio: 'inherit' });
-  await waitForServer('http://127.0.0.1:4177/api/health');
+  let server = null;
+  let startedServer = false;
+  try {
+    await waitForServer('http://127.0.0.1:4177/api/health', 3);
+  } catch {
+    server = spawn('node', ['server/index.mjs'], { cwd: ROOT, stdio: 'inherit' });
+    startedServer = true;
+    await waitForServer('http://127.0.0.1:4177/api/health');
+  }
 
   const registry = loadRegistry();
   const home = await executeRun(
@@ -108,7 +115,7 @@ async function main() {
     null,
   );
 
-  server.kill('SIGTERM');
+  if (startedServer && server) server.kill('SIGTERM');
 
   const failedChecks = [];
   const assertFail = (report, checkId) => {

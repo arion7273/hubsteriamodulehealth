@@ -1,3 +1,5 @@
+import { executePacks } from './packs/executor.mjs';
+import { PACK_DEFINITIONS, validatePacksForInput } from './packs/definitions.mjs';
 import { runLevel1QuickHealth } from './levels/level1-quick-health.mjs';
 import { runLevel2ModuleChecks } from './levels/level2-module.mjs';
 import { runLevel3Workflows } from './levels/level3-workflows.mjs';
@@ -27,6 +29,23 @@ export async function executeRun(runRequest, registry, previousReport) {
 
   let targetUrl = runRequest.targetUrl ?? envConfig?.baseUrl ?? app.baseUrl;
   const inputMode = runRequest.inputMode ?? 'url';
+
+  if (inputMode === 'repository' && !(runRequest.repoRoot ?? app.repositoryPath)) {
+    const blockedFinding = createFinding({
+      checkId: 'run.repo.missing',
+      appId: app.id,
+      environment: runRequest.environment,
+      level: 1,
+      status: 'blocked',
+      severity: 'high',
+      title: 'No repository path configured',
+      remediation: { summary: 'Set repositoryPath on the app or pass repoRoot for repository input mode.' },
+    });
+    return buildReport(runRequest, app, [blockedFinding], {
+      error: 'No repository path configured',
+      blocked: true,
+    });
+  }
 
   if (inputMode === 'url' && !targetUrl && !runRequest.htmlSnapshot) {
     const blockedFinding = createFinding({
@@ -64,8 +83,33 @@ export async function executeRun(runRequest, registry, previousReport) {
   };
 
   const levels = runRequest.levels ?? [1];
+  const packs = runRequest.packs?.length ? runRequest.packs : null;
   const allFindings = [];
   const runStarted = Date.now();
+  let toolRuns = [];
+
+  const repoRoot = runRequest.repoRoot ?? app.repositoryPath ?? null;
+  if (repoRoot) {
+    const abs = path.isAbsolute(repoRoot) ? repoRoot : path.resolve(repoRoot);
+    if (!fs.existsSync(abs)) {
+      return buildReport(
+        runRequest,
+        app,
+        [
+          createFinding({
+            checkId: 'repo.path.missing',
+            appId: app.id,
+            environment: runRequest.environment,
+            status: 'blocked',
+            severity: 'high',
+            title: 'Repository path not found',
+            actual: abs,
+          }),
+        ],
+        { blocked: true, durationMs: Date.now() - runStarted },
+      );
+    }
+  }
 
   const baseCtx = {
     app,
@@ -80,9 +124,33 @@ export async function executeRun(runRequest, registry, previousReport) {
     runId: runRequest.runId,
     moduleSettings,
     retestOf: runRequest.retestOf,
+    repoRoot: repoRoot ? (path.isAbsolute(repoRoot) ? repoRoot : path.resolve(repoRoot)) : null,
   };
 
+  if (packs?.length) {
+    const invalid = validatePacksForInput(packs, inputMode);
+    if (invalid.length) {
+      allFindings.push(
+        createFinding({
+          checkId: 'packs.input.invalid',
+          appId: app.id,
+          environment: runRequest.environment,
+          status: 'blocked',
+          severity: 'high',
+          title: 'Pack not available for input mode',
+          actual: `${invalid.join(', ')} cannot run in ${inputMode} mode`,
+          detail: 'HTML/URL mode does not execute repository tools as live coverage.',
+        }),
+      );
+    } else {
+      const packResult = await executePacks(baseCtx, packs);
+      allFindings.push(...packResult.findings);
+      toolRuns = packResult.toolRuns;
+    }
+  }
+
   for (const level of levels) {
+    if (packs?.length) continue; // legacy levels skipped when packs explicit
     if (level === 1) allFindings.push(...(await runLevel1QuickHealth(baseCtx)));
     if (level === 2) allFindings.push(...(await runLevel2ModuleChecks(baseCtx)));
     if (level === 3) allFindings.push(...(await runLevel3Workflows(baseCtx)));
@@ -97,6 +165,9 @@ export async function executeRun(runRequest, registry, previousReport) {
     durationMs: Date.now() - runStarted,
     targetUrl,
     previousRunId: previousReport?.runId,
+    toolRuns,
+    packsExecuted: packs ?? levels.map((l) => `level-${l}`),
+    packDefinitions: PACK_DEFINITIONS,
   });
 }
 
@@ -143,6 +214,8 @@ function buildReport(runRequest, app, findings, meta = {}) {
     gate,
     headline,
     summary: { counts, executed, modulesConfigured, modulesCovered },
+    tools: meta.toolRuns ?? [],
+    packsExecuted: meta.packsExecuted ?? [],
     modulesInventory: (app.modules ?? []).map((m) => ({
       ...m,
       coverage: findings.some((f) => f.moduleId === m.id) ? 'referenced' : 'not_in_run',

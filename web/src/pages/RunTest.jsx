@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useRegistry } from '../hooks/useRegistry.js';
@@ -19,21 +19,48 @@ export default function RunTest() {
   const [environment, setEnvironment] = useState('custom');
   const [inputMode, setInputMode] = useState('url');
   const [targetUrl, setTargetUrl] = useState('');
+  const [repoRoot, setRepoRoot] = useState('');
   const [html, setHtml] = useState('');
   const [levels, setLevels] = useState([1]);
+  const [usePacks, setUsePacks] = useState(true);
+  const [packCatalog, setPackCatalog] = useState([]);
+  const [packNote, setPackNote] = useState('');
+  const [selectedPacks, setSelectedPacks] = useState(['quick-health']);
   const [job, setJob] = useState(null);
   const [polling, setPolling] = useState(false);
   const [runError, setRunError] = useState('');
+
+  const selectedApp = useMemo(() => apps.find((a) => a.id === appId), [apps, appId]);
 
   useEffect(() => {
     if (!apps.length) return;
     const app = apps.find((a) => a.id === appId);
     const env = app?.environments?.find((e) => e.id === environment);
     if (!targetUrl && env?.baseUrl) setTargetUrl(env.baseUrl);
+    if (!repoRoot && app?.repositoryPath) setRepoRoot(app.repositoryPath);
   }, [apps, appId, environment]);
+
+  useEffect(() => {
+    if (apiOnline !== true) return;
+    api(`/api/packs?inputMode=${inputMode}`)
+      .then((data) => {
+        setPackCatalog(data.packs ?? []);
+        setPackNote(data.note ?? '');
+        setSelectedPacks((prev) => {
+          const allowed = new Set((data.packs ?? []).map((p) => p.id));
+          const kept = prev.filter((id) => allowed.has(id));
+          return kept.length ? kept : [(data.packs ?? [])[0]?.id].filter(Boolean);
+        });
+      })
+      .catch(() => setPackCatalog([]));
+  }, [inputMode, apiOnline]);
 
   function toggleLevel(id) {
     setLevels((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id].sort()));
+  }
+
+  function togglePack(id) {
+    setSelectedPacks((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   async function startRun() {
@@ -46,6 +73,10 @@ export default function RunTest() {
       setRunError('Enter a target URL.');
       return;
     }
+    if (inputMode === 'repository' && !repoRoot?.trim()) {
+      setRunError('Enter a repository path on the runner.');
+      return;
+    }
     const effectiveAppId =
       appId && apps.some((a) => a.id === appId) ? appId : 'adhoc-url-scan';
     setPolling(true);
@@ -54,10 +85,15 @@ export default function RunTest() {
         appId: effectiveAppId,
         environment: effectiveAppId === 'adhoc-url-scan' ? 'custom' : environment,
         inputMode,
-        levels: levels.length ? levels : [1],
         targetUrl: inputMode === 'url' ? targetUrl.trim() : undefined,
+        repoRoot: inputMode === 'repository' ? repoRoot.trim() : undefined,
         htmlSnapshot: inputMode === 'html' ? { html } : undefined,
       };
+      if (usePacks && selectedPacks.length) {
+        body.packs = selectedPacks;
+      } else {
+        body.levels = levels.length ? levels : [1];
+      }
       const { runId } = await api('/api/runs', { method: 'POST', body: JSON.stringify(body) });
       setJob({ runId, status: 'queued' });
       const interval = setInterval(async () => {
@@ -90,7 +126,9 @@ export default function RunTest() {
     <div className="stack">
       <h2>Run test</h2>
       <p style={{ color: 'var(--muted)' }}>
-        Choose app → environment / input → scope → levels. HTML mode: layout, links, a11y on snapshot only — not backend/auth.
+        Choose app → input mode → test packs (recommended) or legacy levels. URL/HTML exercises the live or
+        snapshot UI; repository mode runs lint, typecheck, tests, and security scanners on a connected checkout —
+        neither replaces the other.
       </p>
 
       <BackendBanner apiOnline={apiOnline} />
@@ -105,7 +143,7 @@ export default function RunTest() {
 
         <label>Environment</label>
         <select value={environment} onChange={(e) => setEnvironment(e.target.value)}>
-          {(apps.find((a) => a.id === appId)?.environments ?? []).map((e) => (
+          {(selectedApp?.environments ?? []).map((e) => (
             <option key={e.id} value={e.id}>{e.label}</option>
           ))}
         </select>
@@ -114,6 +152,7 @@ export default function RunTest() {
         <select value={inputMode} onChange={(e) => setInputMode(e.target.value)}>
           <option value="url">Live URL</option>
           <option value="html">HTML snapshot (isolated)</option>
+          <option value="repository">Connected repository (runner checkout)</option>
         </select>
 
         {inputMode === 'url' ? (
@@ -121,20 +160,54 @@ export default function RunTest() {
             <label>Target URL</label>
             <input value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} style={{ width: '100%' }} />
           </>
-        ) : (
+        ) : inputMode === 'html' ? (
           <>
             <label>Paste HTML</label>
             <textarea rows={8} value={html} onChange={(e) => setHtml(e.target.value)} style={{ width: '100%' }} />
           </>
+        ) : (
+          <>
+            <label>Repository path (on scan runner)</label>
+            <input value={repoRoot} onChange={(e) => setRepoRoot(e.target.value)} style={{ width: '100%' }} />
+            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
+              Example: {selectedApp?.repositoryPath ?? 'fixtures/sample-repo'}
+            </p>
+          </>
         )}
 
-        <label>Test levels</label>
-        {LEVELS.map((l) => (
-          <label key={l.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input type="checkbox" checked={levels.includes(l.id)} onChange={() => toggleLevel(l.id)} />
-            {l.label}
-          </label>
-        ))}
+        <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <input type="checkbox" checked={usePacks} onChange={(e) => setUsePacks(e.target.checked)} />
+          Use selectable test packs (engines)
+        </label>
+
+        {usePacks ? (
+          <>
+            {packNote && <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{packNote}</p>}
+            <label>Test packs</label>
+            {packCatalog.map((p) => (
+              <label key={p.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedPacks.includes(p.id)}
+                  onChange={() => togglePack(p.id)}
+                />
+                <span>
+                  <strong>{p.label}</strong> — {p.description}
+                </span>
+              </label>
+            ))}
+          </>
+        ) : (
+          <>
+            <label>Test levels (legacy)</label>
+            {LEVELS.map((l) => (
+              <label key={l.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input type="checkbox" checked={levels.includes(l.id)} onChange={() => toggleLevel(l.id)} />
+                {l.label}
+              </label>
+            ))}
+          </>
+        )}
 
         {runError && (
           <p role="alert" style={{ color: '#fca5a5', margin: 0 }}>{runError}</p>

@@ -1,6 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
+import { PNG } from 'pngjs';
+import pixelmatch from 'pixelmatch';
 import { createFinding } from '../findings.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.join(__dirname, '../..');
 
 const VIEWPORTS = [
   { id: 'desktop', width: 1280, height: 800 },
@@ -14,7 +22,7 @@ const VIEWPORTS = [
  */
 export async function runLevel4Quality(ctx) {
   const findings = [];
-  const { targetUrl, appId, environment, inputMode, htmlSnapshot, budgets } = ctx;
+  const { targetUrl, appId, environment, inputMode, htmlSnapshot, budgets, app } = ctx;
   if (inputMode === 'html' && !htmlSnapshot?.html) {
     return [
       createFinding({
@@ -61,6 +69,7 @@ export async function runLevel4Quality(ctx) {
     );
   }
 
+  if (!ctx.skipAxe) {
   try {
     const axeResults = await new AxeBuilder({ page }).analyze();
     const violations = axeResults.violations ?? [];
@@ -110,19 +119,81 @@ export async function runLevel4Quality(ctx) {
       }),
     );
   }
+  }
 
-  findings.push(
-    createFinding({
-      checkId: 'l4.visual.baseline',
-      appId,
-      environment,
-      level: 4,
-      status: 'not_tested',
-      severity: 'info',
-      title: 'Screenshot baseline comparison',
-      actual: 'Baselines require approved reference images (Phase C).',
-    }),
-  );
+  const baselineRel =
+    app?.visualBaselines?.[targetUrl] ??
+    (targetUrl?.includes('visual-regression')
+      ? 'fixtures/defect-app/baselines/visual-regression.png'
+      : null);
+  if (baselineRel) {
+    await page.setViewportSize({ width: 800, height: 600 });
+    const baselinePath = path.isAbsolute(baselineRel) ? baselineRel : path.join(REPO_ROOT, baselineRel);
+    const shot = await page.screenshot({ fullPage: false });
+    const evidenceDir = path.join(REPO_ROOT, 'data/evidence', ctx.runId ?? 'run');
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    const actualPath = path.join(evidenceDir, 'visual-actual.png');
+    fs.writeFileSync(actualPath, shot);
+    if (!fs.existsSync(baselinePath)) {
+      findings.push(
+        createFinding({
+          checkId: 'l4.visual.baseline',
+          appId,
+          environment,
+          level: 4,
+          status: 'blocked',
+          severity: 'info',
+          title: 'Visual baseline missing on runner',
+          actual: baselinePath,
+        }),
+      );
+    } else {
+      const expected = PNG.sync.read(fs.readFileSync(baselinePath));
+      const actual = PNG.sync.read(shot);
+      const { width, height } = expected;
+      const diff = new PNG({ width, height });
+      const diffPixels = pixelmatch(expected.data, actual.data, diff.data, width, height, {
+        threshold: 0.2,
+      });
+      const maxDiff = budgets?.visualMaxDiffPixels ?? 50;
+      const diffPath = path.join(evidenceDir, 'visual-diff.png');
+      fs.writeFileSync(diffPath, PNG.sync.write(diff));
+      findings.push(
+        createFinding({
+          checkId: 'l4.visual.baseline',
+          appId,
+          environment,
+          level: 4,
+          status: diffPixels <= maxDiff ? 'pass' : 'fail',
+          severity: diffPixels <= maxDiff ? 'info' : 'medium',
+          title: 'Screenshot baseline comparison',
+          expected: `≤ ${maxDiff} differing pixels vs approved baseline`,
+          actual: `${diffPixels} pixels differ`,
+          evidence: [
+            { type: 'screenshot', path: actualPath },
+            { type: 'screenshot-diff', path: diffPath },
+            { type: 'baseline', path: baselinePath },
+          ],
+          remediation: diffPixels > maxDiff
+            ? { summary: 'Approve a new baseline after intentional UI change, then rerun visual check.' }
+            : undefined,
+        }),
+      );
+    }
+  } else if (!targetUrl?.includes('visual-regression')) {
+    findings.push(
+      createFinding({
+        checkId: 'l4.visual.baseline',
+        appId,
+        environment,
+        level: 4,
+        status: 'not_tested',
+        severity: 'info',
+        title: 'Screenshot baseline comparison',
+        actual: 'No approved baseline configured for this URL.',
+      }),
+    );
+  }
 
   await browser.close();
   return findings;

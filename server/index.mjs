@@ -15,6 +15,7 @@ import {
 } from './storage.mjs';
 import { enqueueRun, cancelRun, getJob, listJobs } from './run-queue.mjs';
 import { scheduleStatus, startScheduler } from './scheduler.mjs';
+import { PACK_DEFINITIONS, packsForInputMode } from '../engine/packs/definitions.mjs';
 import { exportMigrationBundle, importMigrationBundle } from '../scripts/lib/migrate-cloud.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -48,6 +49,24 @@ function requireMigrationAuth(req, res, next) {
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'hubsteriamodulehealth' }));
+
+app.get('/api/packs', (req, res) => {
+  const inputMode = req.query.inputMode ?? 'url';
+  const packs = packsForInputMode(inputMode).map((id) => ({
+    id,
+    ...PACK_DEFINITIONS[id],
+  }));
+  res.json({
+    inputMode,
+    packs,
+    note:
+      inputMode === 'html'
+        ? 'HTML snapshot mode cannot execute repository tools or live backend verification.'
+        : inputMode === 'repository'
+          ? 'Repository mode runs static analysis and tests; it does not prove live user transactions.'
+          : 'URL mode exercises rendered pages; it does not replace source-code inspection.',
+  });
+});
 
 app.get('/api/migrate/export', requireMigrationAuth, (req, res) => {
   const includeRuns = req.query.runs === '1';

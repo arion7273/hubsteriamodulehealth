@@ -1,0 +1,6 @@
+rules:
+  - id: fixture-no-eval
+    message: Avoid eval in application code (fixture rule)
+    severity: ERROR
+    languages: [typescript, javascript]
+    pattern: eval(...)
