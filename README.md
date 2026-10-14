@@ -83,7 +83,11 @@ Full runbook: [docs/CLOUD_TO_CLOUD_MIGRATION.md](docs/CLOUD_TO_CLOUD_MIGRATION.m
 
 ## Vercel (UI only)
 
-`vercel.json` runs **`npm install` / `npm run build` only under `web/`** so the root scan engine (Playwright, Lighthouse, etc.) is not installed on Vercel.
+**Vercel Root Directory** should be **`web`** (recommended). Config lives in `web/vercel.json` (`npm ci` + `vite build` only — no Playwright).
+
+If Root Directory is the **repo root**, root `vercel.json` runs `scripts/vercel-*.sh` to build `web/` without installing scan-engine dependencies.
+
+`web/package.json` includes `build:web` and `vercel-build` aliases so older Vercel dashboard overrides still work.
 
 `hubsteriamodulehealth.vercel.app` serves the **static React build**. It does **not** run Playwright or `/api/*` unless you point the UI at a real API:
 
