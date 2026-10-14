@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ModuleHealthMigrationBundle",
+  "type": "object",
+  "required": ["bundleVersion", "exportedAt", "registryOverlay", "settings"],
+  "properties": {
+    "bundleVersion": { "type": "integer" },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "properties": {
+        "hostname": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "registryOverlay": {
+      "type": "object",
+      "properties": {
+        "apps": { "type": "array" }
+      }
+    },
+    "settings": { "type": "object" },
+    "runs": { "type": "array" },
+    "secretsAccountRefs": { "type": "array", "items": { "type": "string" } },
+    "checklist": { "type": "array", "items": { "type": "string" } }
+  }
+}

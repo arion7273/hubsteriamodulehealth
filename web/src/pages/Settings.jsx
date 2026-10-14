@@ -66,6 +66,16 @@ export default function Settings() {
         <button className="primary" type="button" onClick={save}>Save settings</button>
       </div>
 
+      <div className="card">
+        <h3>Cloud → cloud migration</h3>
+        <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+          Export registry overlays, settings, and run history from the API host with{' '}
+          <code>npm run migrate:export</code>, import on the new host with{' '}
+          <code>npm run migrate:import -- --merge</code>. Secrets are re-entered manually — see{' '}
+          <code>docs/CLOUD_TO_CLOUD_MIGRATION.md</code> in the repo.
+        </p>
+      </div>
+
       <div className="card stack">
         <h3>Add application by URL</h3>
         <label>Name</label>

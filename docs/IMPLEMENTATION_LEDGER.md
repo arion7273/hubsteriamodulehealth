@@ -16,3 +16,4 @@
 | Dashboard UI | IMPLEMENTED_VERIFIED | Overview, run, reports, settings |
 | Credentials server-side | IMPLEMENTED_VERIFIED | `data/secrets.json` gitignored; refs only in registry |
 | Defect fixture app | IMPLEMENTED_VERIFIED | `fixtures/defect-app/` |
+| Cloud → cloud migration | IMPLEMENTED_VERIFIED | `migrate:export` / `migrate:import`, `docs/CLOUD_TO_CLOUD_MIGRATION.md` |

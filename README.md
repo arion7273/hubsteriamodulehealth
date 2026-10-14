@@ -70,6 +70,17 @@ Stored under `data/runs/`. Each report includes:
 
 See `docs/IMPLEMENTATION_LEDGER.md`.
 
+## Cloud → cloud migration
+
+Moving between Cloud Agent VMs, Vercel + API split, or Railway/Fly hosts:
+
+1. **Export** on source: `npm run migrate:export -- --out migration-bundle.json --runs`
+2. **Import** on target: `npm run migrate:import -- --in migration-bundle.json --merge`
+3. Re-enter **secrets** manually (`data/secrets.json`); bundles never contain passwords.
+4. Update **`VITE_API_BASE`** / **`CORS_ORIGINS`** and redeploy UI.
+
+Full runbook: [docs/CLOUD_TO_CLOUD_MIGRATION.md](docs/CLOUD_TO_CLOUD_MIGRATION.md).
+
 ## Vercel (UI only)
 
 `hubsteriamodulehealth.vercel.app` serves the **static React build**. It does **not** run Playwright or `/api/*` unless you point the UI at a real API:

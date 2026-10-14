@@ -1,4 +1,5 @@
 reports/
+migration-bundle.json
 data/secrets.json
 data/registry.apps.json
 data/runs/

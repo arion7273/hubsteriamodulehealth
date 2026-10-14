@@ -15,6 +15,7 @@ import {
 } from './storage.mjs';
 import { enqueueRun, cancelRun, getJob, listJobs } from './run-queue.mjs';
 import { scheduleStatus, startScheduler } from './scheduler.mjs';
+import { exportMigrationBundle, importMigrationBundle } from '../scripts/lib/migrate-cloud.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -37,7 +38,34 @@ app.use('/fixtures', express.static(path.join(ROOT, 'fixtures')));
 const webDist = path.join(ROOT, 'web/dist');
 app.use(express.static(webDist));
 
+function requireMigrationAuth(req, res, next) {
+  const token = process.env.MIGRATION_TOKEN;
+  if (!token) return next();
+  const auth = req.headers.authorization ?? '';
+  if (auth === `Bearer ${token}`) return next();
+  res.status(401).json({ error: 'migration auth required' });
+}
+
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'hubsteriamodulehealth' }));
+
+app.get('/api/migrate/export', requireMigrationAuth, (req, res) => {
+  const includeRuns = req.query.runs === '1';
+  const maxRuns = Number(req.query.maxRuns ?? 200);
+  res.json(exportMigrationBundle({ includeRuns, maxRuns, note: 'api-export' }));
+});
+
+app.post('/api/migrate/import', requireMigrationAuth, (req, res) => {
+  try {
+    const report = importMigrationBundle(req.body, {
+      merge: !!req.body?.merge,
+      dryRun: !!req.query.dryRun,
+      replaceRuns: !!req.body?.replaceRuns,
+    });
+    res.json(report);
+  } catch (e) {
+    res.status(400).json({ error: String(e?.message ?? e) });
+  }
+});
 
 app.get('/api/registry', (_req, res) => {
   const reg = loadRegistry();
