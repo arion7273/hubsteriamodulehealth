@@ -1,0 +1,35 @@
+{
+  "product": "hubsteriamodulehealth",
+  "last_reviewed_commit": null,
+  "last_reviewed_date": "2026-10-14",
+  "claims": [
+    {
+      "id": "manifest.verify-script",
+      "moduleId": "patients-stub",
+      "category": "manifest",
+      "text": "Module exposes npm script verify for health gate",
+      "checkId": "manifest.package.verify-script"
+    },
+    {
+      "id": "env.documented",
+      "moduleId": "patients-stub",
+      "category": "security",
+      "text": "All env vars used in code appear in .env.example",
+      "checkId": "env.example.complete"
+    },
+    {
+      "id": "schema.rls",
+      "moduleId": "patients-stub",
+      "category": "schema",
+      "text": "RLS policies declared in migrations snapshot",
+      "checkId": "schema.rls.declared"
+    },
+    {
+      "id": "api.health",
+      "moduleId": "patients-stub",
+      "category": "api",
+      "text": "Health route responds ok",
+      "checkId": "smoke.health.endpoint"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "hubsteriamodulehealth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Module Health Suite — micro-checks, extensive reports, and safe auto-fixes for Hubsteria modules",
+  "bin": {
+    "module-health": "./scripts/run-module-health.mjs"
+  },
+  "scripts": {
+    "module:health": "node scripts/run-module-health.mjs",
+    "module:health:fix": "node scripts/run-module-health.mjs --fix",
+    "module:health:example": "node scripts/run-module-health.mjs --manifest modules.manifest.json",
+    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hubsteria.dev/schemas/module-health/report.schema.json",
+  "title": "ModuleHealthReport",
+  "type": "object",
+  "required": ["version", "generatedAt", "gate", "summary", "modules", "findings"],
+  "properties": {
+    "version": { "type": "integer" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "gate": {
+      "type": "string",
+      "enum": ["ship", "fix_blockers", "investigate_blocked"]
+    },
+    "summary": { "type": "object" },
+    "modules": { "type": "array" },
+    "findings": { "type": "array" },
+    "meta": { "type": "object" }
+  }
+}

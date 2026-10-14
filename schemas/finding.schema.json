@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hubsteria.dev/schemas/module-health/finding.schema.json",
+  "title": "ModuleHealthFinding",
+  "type": "object",
+  "required": [
+    "checkId",
+    "moduleId",
+    "category",
+    "layer",
+    "status",
+    "severity",
+    "title"
+  ],
+  "properties": {
+    "checkId": { "type": "string" },
+    "moduleId": { "type": "string" },
+    "category": { "type": "string" },
+    "layer": {
+      "type": "string",
+      "enum": ["discovery", "static", "contract", "smoke", "integration", "conformance"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "fail", "skip", "blocked"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["blocker", "high", "medium", "low", "info"]
+    },
+    "title": { "type": "string" },
+    "detail": { "type": "string" },
+    "durationMs": { "type": "number" },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "path": { "type": "string" },
+          "line": { "type": "number" },
+          "snippet": { "type": "string" }
+        }
+      }
+    },
+    "remediation": {
+      "type": "object",
+      "properties": {
+        "summary": { "type": "string" },
+        "steps": { "type": "array", "items": { "type": "string" } },
+        "docUrl": { "type": "string" }
+      }
+    },
+    "fix": {
+      "type": "object",
+      "properties": {
+        "capability": { "type": "string", "enum": ["auto", "assisted", "manual"] },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "fixId": { "type": "string" },
+        "risk": { "type": "string", "enum": ["low", "medium", "high"] },
+        "preview": { "type": "string" }
+      }
+    },
+    "fixedInRun": { "type": "boolean" }
+  }
+}

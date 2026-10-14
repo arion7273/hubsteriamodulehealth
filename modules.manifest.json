@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "defaults": {
+    "layers": ["discovery", "static", "contract", "smoke"],
+    "parallelModules": true
+  },
+  "modules": [
+    {
+      "moduleId": "patients-stub",
+      "displayName": "Patients (example stub)",
+      "root": "examples/patients-stub",
+      "tier": "pilot",
+      "requiredLayers": ["discovery", "static", "contract", "smoke"]
+    }
+  ]
+}
