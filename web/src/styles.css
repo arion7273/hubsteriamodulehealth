@@ -1,0 +1,87 @@
+:root {
+  --bg: #0f1419;
+  --panel: #1a2332;
+  --text: #e7ecf3;
+  --muted: #9aa8bc;
+  --accent: #3d8bfd;
+  --pass: #3dd68c;
+  --fail: #f87171;
+  --blocked: #fbbf24;
+  --border: #2d3a4f;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.layout { display: flex; min-height: 100vh; }
+nav.sidebar {
+  width: 240px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 1.25rem;
+}
+nav.sidebar h1 { font-size: 1rem; margin: 0 0 1rem; }
+nav.sidebar a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+nav.sidebar a.active { background: #243044; color: var(--accent); }
+
+main { flex: 1; padding: 1.5rem; max-width: 1100px; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge.pass { background: #163d2e; color: var(--pass); }
+.badge.fail { background: #4a1f1f; color: var(--fail); }
+.badge.blocked { background: #4a3a12; color: var(--blocked); }
+
+label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+input, select, textarea, button {
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #121a26;
+  color: var(--text);
+  padding: 0.5rem 0.65rem;
+}
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.stack > * + * { margin-top: 0.75rem; }
+
+@media (max-width: 768px) {
+  .layout { flex-direction: column; }
+  nav.sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+}

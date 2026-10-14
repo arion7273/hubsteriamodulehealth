@@ -1,63 +1,75 @@
 # hubsteriamodulehealth
 
-**Module Health Suite** — extensive micro-checks, structured reports, and safe auto-fixes for Hubsteria modules.
+Multi-app tester and checker for Hubsteria applications: **five test levels**, honest reporting, schedules, and a dashboard. Reuses the original **module micro-check CLI** for filesystem module gates.
 
 ## Quick start
 
 ```bash
+npm install
+npx playwright install chromium
+npm run build:web
+npm start
+```
+
+Open **http://127.0.0.1:4177** — overview, run test, reports, schedules, per-app settings.
+
+### CLI (no UI)
+
+```bash
+# Legacy module micro-checks (filesystem modules)
 npm run module:health
+
+# App-level browser checks
+node scripts/run-app-test.mjs --app defect-fixture --env local --levels 1,4
 ```
 
-Reports are written to `reports/latest/`:
-
-| File | Purpose |
-|------|---------|
-| `report.json` | Full machine-readable matrix |
-| `REPORT.md` | Human summary + **Fix** CLI commands |
-| `gaps.json` | Failures, blocked, and skips |
-| `fixes.manifest.json` | Auto/assisted fixes with `cliFix` |
-| `report.junit.xml` | CI annotations |
-
-## Fix button (CLI)
-
-Apply one check:
+### Daily / CI verification
 
 ```bash
-npm run module:health -- --fix --check-id=env.example.complete
+npm test
 ```
 
-Apply all safe auto-fixes (`auto`, high confidence, low risk):
+Runs module stub checks + `verify:platform` against the **defect fixture** (broken link, JS error, mobile overflow, axe violations).
 
-```bash
-npm run module:health -- --fix-all
-```
+## Registered apps
 
-Dry run:
+- HubsteriaCare, HubsteriaBrew, HubsteriaClinic, HubsteriaGuardian (`registry/apps.json`)
+- **Defect fixture** (internal) for proving the tester
+- **Add apps** in the UI (Settings) or `POST /api/apps` with name + URL
 
-```bash
-npm run module:health -- --fix-all --dry-run
-```
+Credentials stay in `data/secrets.json` (gitignored); registry only stores **account refs**.
 
-## Wire your modules
+## Test levels
 
-Edit `modules.manifest.json`:
+| Level | Focus |
+|-------|--------|
+| 1 | Quick health — reachability, links, JS errors, first-party network |
+| 2 | Module check — filesystem checks + inventory; live mutations need config |
+| 3 | Workflow recipes — templates in `registry/workflows/templates.json` (unconfigured until adapted) |
+| 4 | Quality — viewports, overflow, axe (not full a11y certification) |
+| 5 | Resilience/load — blocked on production; Phase D |
 
-```json
-{
-  "moduleId": "patients",
-  "displayName": "Patients",
-  "root": "../hubsteriaguardian/modules/patients",
-  "requiredLayers": ["discovery", "static", "contract", "smoke"]
-}
-```
+## Input modes
 
-Map product claims in `docs/module-claims.json` (`checkId` ↔ requirement).
+- **Live URL** — with origin guard and local-runner policy (`registry/apps.json` → `global`)
+- **HTML snapshot** — isolated `setContent`; scope banner in report; no backend/auth claims
+- **Authenticated URL** — account refs + secrets (wire credentials in `data/secrets.json`; execution hooks Phase B)
 
-## Pilot
+## Reports
 
-The included `examples/patients-stub` module intentionally fails several checks so you can see the report and run `--fix-all`.
+Stored under `data/runs/`. Each report includes:
 
-## Adding checks
+- Executed vs configured modules (honest headline)
+- pass / fail / blocked / not_tested counts
+- Trends vs previous comparable run
+- **Copy Cursor fix prompt** per finding (API + UI)
 
-1. Add a row to `checks/registry.mjs` with stable `checkId`.
-2. Optional: add handler in `fixes/registry.mjs` with matching `fixId`.
+## Implementation status
+
+See `docs/IMPLEMENTATION_LEDGER.md`.
+
+## Operating limits
+
+- Playwright runs on the server host; long jobs use an in-process queue (`maxConcurrentRuns`).
+- Production targets: read-only by default; mutating workflows need `mutationsAllowed` on staging.
+- Visual baselines and load tests are not fully implemented (Phase C/D).

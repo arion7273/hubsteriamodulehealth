@@ -11,9 +11,19 @@
     "module:health": "node scripts/run-module-health.mjs",
     "module:health:fix": "node scripts/run-module-health.mjs --fix",
     "module:health:example": "node scripts/run-module-health.mjs --manifest modules.manifest.json",
-    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci"
+    "build:web": "npm install --prefix web && npm run build --prefix web",
+    "start": "node server/index.mjs",
+    "dev:server": "node server/index.mjs",
+    "verify:platform": "node scripts/verify-platform.mjs",
+    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.49.1"
   }
 }

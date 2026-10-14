@@ -1,0 +1,42 @@
+{
+  "templates": [
+    {
+      "id": "care-medication-administration",
+      "appId": "hubsteria-care",
+      "label": "Resident → medication charting → administration → audit",
+      "configured": false,
+      "level": 3,
+      "tags": ["mutating"],
+      "note": "Unconfigured until routes and seeded resident IDs are set in app settings.",
+      "steps": []
+    },
+    {
+      "id": "brew-order-to-served",
+      "appId": "hubsteria-brew",
+      "label": "Test order → sandbox payment → barista queue → served",
+      "configured": false,
+      "level": 3,
+      "tags": ["mutating", "payments-sandbox"],
+      "note": "Requires payment sandbox credentials and barista queue routes.",
+      "steps": []
+    },
+    {
+      "id": "clinic-questionnaire-to-portal",
+      "appId": "hubsteria-clinic",
+      "label": "Test patient → questionnaire → clinician review → portal visibility",
+      "configured": false,
+      "level": 3,
+      "tags": ["mutating", "phi-test-data"],
+      "steps": []
+    },
+    {
+      "id": "guardian-patient-questionnaire-portal",
+      "appId": "hubsteria-guardian",
+      "label": "Test patient → questionnaire → approved result → portal",
+      "configured": false,
+      "level": 3,
+      "tags": ["mutating"],
+      "steps": []
+    }
+  ]
+}

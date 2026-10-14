@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "global": {
+    "timezone": "America/New_York",
+    "localRunnerEnabled": true,
+    "allowedLocalHosts": ["localhost", "127.0.0.1"],
+    "maxConcurrentRuns": 2,
+    "defaultPageLimit": 15,
+    "defaultTimeoutMs": 45000
+  },
+  "apps": [
+    {
+      "id": "hubsteria-care",
+      "name": "HubsteriaCare",
+      "description": "Residential care operations",
+      "baseUrl": null,
+      "environments": [
+        { "id": "local", "label": "Local", "baseUrl": "http://localhost:3000", "mutationsAllowed": false },
+        { "id": "preview", "label": "Preview", "baseUrl": null, "mutationsAllowed": false },
+        { "id": "staging", "label": "Staging", "baseUrl": null, "mutationsAllowed": true },
+        { "id": "production", "label": "Production", "baseUrl": null, "mutationsAllowed": false }
+      ],
+      "modules": [
+        { "id": "residents", "label": "Residents", "routes": ["/residents"], "status": "expected" },
+        { "id": "medications", "label": "Medications", "routes": ["/medications"], "status": "expected" }
+      ],
+      "criticalWorkflows": ["care-medication-administration"],
+      "testAccountRefs": ["care-nurse-seed"],
+      "integrations": ["supabase"],
+      "schedules": { "enabled": false, "dailyHealthCron": "0 7 * * *", "deepQualityCron": "0 3 * * 0" },
+      "budgets": { "pageLimit": 15, "timeoutMs": 45000, "maxActionMs": 8000 },
+      "buildId": null
+    },
+    {
+      "id": "hubsteria-brew",
+      "name": "HubsteriaBrew",
+      "description": "Cafe POS and production",
+      "baseUrl": null,
+      "environments": [
+        { "id": "local", "label": "Local", "baseUrl": "http://localhost:3001", "mutationsAllowed": false },
+        { "id": "preview", "label": "Preview", "baseUrl": null, "mutationsAllowed": false },
+        { "id": "staging", "label": "Staging", "baseUrl": null, "mutationsAllowed": true },
+        { "id": "production", "label": "Production", "baseUrl": null, "mutationsAllowed": false }
+      ],
+      "modules": [
+        { "id": "orders", "label": "Orders", "routes": ["/orders"], "status": "expected" },
+        { "id": "barista", "label": "Barista queue", "routes": ["/barista"], "status": "expected" }
+      ],
+      "criticalWorkflows": ["brew-order-to-served"],
+      "testAccountRefs": ["brew-barista-seed"],
+      "integrations": ["payments-sandbox"],
+      "schedules": { "enabled": false },
+      "budgets": { "pageLimit": 20, "timeoutMs": 60000 },
+      "buildId": null
+    },
+    {
+      "id": "hubsteria-clinic",
+      "name": "HubsteriaClinic",
+      "description": "Clinic questionnaires and results",
+      "baseUrl": null,
+      "environments": [
+        { "id": "local", "label": "Local", "baseUrl": "http://localhost:3002", "mutationsAllowed": false },
+        { "id": "staging", "label": "Staging", "baseUrl": null, "mutationsAllowed": true },
+        { "id": "production", "label": "Production", "baseUrl": null, "mutationsAllowed": false }
+      ],
+      "modules": [
+        { "id": "patients", "label": "Patients", "routes": ["/patients"], "status": "expected" },
+        { "id": "questionnaires", "label": "Questionnaires", "routes": ["/questionnaires"], "status": "expected" }
+      ],
+      "criticalWorkflows": ["clinic-questionnaire-to-portal"],
+      "testAccountRefs": ["clinic-clinician-seed"],
+      "integrations": ["supabase"],
+      "schedules": { "enabled": false },
+      "budgets": { "pageLimit": 15, "timeoutMs": 45000 },
+      "buildId": null
+    },
+    {
+      "id": "hubsteria-guardian",
+      "name": "HubsteriaGuardian",
+      "description": "Guardian clinical module platform",
+      "baseUrl": null,
+      "environments": [
+        { "id": "local", "label": "Local", "baseUrl": "http://localhost:3003", "mutationsAllowed": false },
+        { "id": "staging", "label": "Staging", "baseUrl": null, "mutationsAllowed": true },
+        { "id": "production", "label": "Production", "baseUrl": null, "mutationsAllowed": false }
+      ],
+      "modules": [
+        { "id": "patients", "label": "Patients", "routes": ["/patients"], "status": "expected" },
+        { "id": "appointments", "label": "Appointments", "routes": ["/appointments"], "status": "expected" }
+      ],
+      "criticalWorkflows": ["guardian-patient-questionnaire-portal"],
+      "testAccountRefs": ["guardian-staff-seed"],
+      "integrations": ["supabase"],
+      "schedules": { "enabled": false },
+      "budgets": { "pageLimit": 25, "timeoutMs": 60000 },
+      "buildId": null,
+      "filesystemModuleRoot": null
+    },
+    {
+      "id": "defect-fixture",
+      "name": "Defect Fixture (internal)",
+      "description": "Controlled app with known defects for tester verification",
+      "baseUrl": "http://127.0.0.1:4177/fixtures/defect-app/index.html",
+      "environments": [
+        {
+          "id": "local",
+          "label": "Local fixture",
+          "baseUrl": "http://127.0.0.1:4177/fixtures/defect-app/index.html",
+          "mutationsAllowed": false
+        }
+      ],
+      "modules": [
+        { "id": "home", "label": "Home", "routes": ["/"], "status": "present" },
+        { "id": "forms", "label": "Forms", "routes": ["/form.html"], "status": "present" },
+        { "id": "mobile", "label": "Mobile layout", "routes": ["/mobile.html"], "status": "present" }
+      ],
+      "criticalWorkflows": [],
+      "testAccountRefs": [],
+      "integrations": [],
+      "schedules": { "enabled": false },
+      "budgets": { "pageLimit": 12, "timeoutMs": 30000 },
+      "buildId": "fixture-1"
+    }
+  ]
+}

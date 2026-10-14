@@ -1,3 +1,9 @@
 reports/
+data/secrets.json
+data/registry.apps.json
+data/runs/
+data/settings/
 node_modules/
+web/node_modules/
+web/dist/
 .DS_Store
