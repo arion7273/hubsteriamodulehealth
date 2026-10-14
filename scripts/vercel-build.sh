@@ -1,7 +1,3 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ -f vite.config.js ]]; then
-  npm run build
-else
-  npm run build --prefix web
-fi
+exec node "$(dirname "$0")/vercel-build.mjs"
