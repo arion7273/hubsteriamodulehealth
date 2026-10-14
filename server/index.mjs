@@ -34,6 +34,7 @@ app.use(
 app.use(express.json({ limit: '2mb' }));
 
 app.use('/fixtures', express.static(path.join(ROOT, 'fixtures')));
+app.use('/evidence', express.static(path.join(ROOT, 'data/evidence')));
 
 const webDist = path.join(ROOT, 'web/dist');
 app.use(express.static(webDist));
@@ -150,6 +151,31 @@ app.post('/api/runs', async (req, res) => {
   if (!body.appId) return res.status(400).json({ error: 'appId required' });
   const job = await enqueueRun(body);
   res.status(202).json({ runId: job.runId, status: job.status });
+});
+
+app.post('/api/runs/:runId/retest', async (req, res) => {
+  const prior = getRun(req.params.runId);
+  if (!prior) return res.status(404).json({ error: 'prior run not found' });
+  const mode = req.body?.mode ?? 'failed';
+  let levels = prior.levels ?? [1];
+  let checkFilter = null;
+  if (mode === 'finding' && req.body?.checkId) {
+    checkFilter = [req.body.checkId];
+    levels = [1];
+  } else if (mode === 'failed') {
+    checkFilter = prior.findings.filter((f) => f.status === 'fail').map((f) => f.checkId);
+  }
+  const job = await enqueueRun({
+    appId: prior.appId,
+    environment: prior.environment,
+    inputMode: prior.inputMode,
+    levels,
+    targetUrl: prior.meta?.targetUrl ?? req.body?.targetUrl,
+    retestOf: prior.runId,
+    retestMode: mode,
+    checkFilter,
+  });
+  res.status(202).json({ runId: job.runId, retestOf: prior.runId, status: job.status });
 });
 
 app.post('/api/runs/:runId/cancel', (req, res) => {

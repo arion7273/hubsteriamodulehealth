@@ -4,6 +4,7 @@ import { runLevel3Workflows } from './levels/level3-workflows.mjs';
 import { runLevel4Quality } from './levels/level4-quality.mjs';
 import { runLevel5Resilience } from './levels/level5-resilience.mjs';
 import { mergeWithHistory, summarizeFindings, createFinding } from './findings.mjs';
+import { structureReport } from './report-structure.mjs';
 import { assertUrlAllowed } from './security/url-guard.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -64,6 +65,7 @@ export async function executeRun(runRequest, registry, previousReport) {
 
   const levels = runRequest.levels ?? [1];
   const allFindings = [];
+  const runStarted = Date.now();
 
   const baseCtx = {
     app,
@@ -75,6 +77,9 @@ export async function executeRun(runRequest, registry, previousReport) {
     budgets,
     moduleIds: runRequest.moduleIds,
     workflowIds: runRequest.workflowIds,
+    runId: runRequest.runId,
+    moduleSettings,
+    retestOf: runRequest.retestOf,
   };
 
   for (const level of levels) {
@@ -86,7 +91,13 @@ export async function executeRun(runRequest, registry, previousReport) {
   }
 
   const merged = mergeWithHistory(allFindings, previousReport?.findings ?? []);
-  return buildReport(runRequest, app, merged, { budgets, envConfig });
+  return buildReport(runRequest, app, merged, {
+    budgets,
+    envConfig,
+    durationMs: Date.now() - runStarted,
+    targetUrl,
+    previousRunId: previousReport?.runId,
+  });
 }
 
 function buildReport(runRequest, app, findings, meta = {}) {
@@ -108,22 +119,15 @@ function buildReport(runRequest, app, findings, meta = {}) {
     (f) => f.status === 'fail' && (f.severity === 'blocker' || f.severity === 'high'),
   );
 
+  const structured = structureReport(findings);
+  const readinessFail = findings.find((f) => f.checkId === 'l1.readiness.application' && f.status !== 'pass');
+
   let gate = 'ship';
   if (meta.blocked || meta.error) gate = 'investigate_blocked';
-  else if (failHigh.length) gate = 'fix_blockers';
+  else if (failHigh.length || readinessFail) gate = 'fix_blockers';
   else if (counts.fail > 0) gate = 'fix_issues';
 
-  const recommendations = findings
-    .filter((f) => f.status === 'fail')
-    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
-    .slice(0, 15)
-    .map((f) => ({
-      findingId: f.id,
-      checkId: f.checkId,
-      title: f.title,
-      severity: f.severity,
-      summary: f.remediation?.summary ?? f.detail ?? f.title,
-    }));
+  const recommendations = structured.topFixes;
 
   return {
     version: 2,
@@ -144,8 +148,16 @@ function buildReport(runRequest, app, findings, meta = {}) {
       coverage: findings.some((f) => f.moduleId === m.id) ? 'referenced' : 'not_in_run',
     })),
     findings,
+    structured,
     recommendations,
-    meta,
+    meta: {
+      ...meta,
+      role: meta.role ?? null,
+      targetUrl: meta.targetUrl ?? null,
+      durationMs: meta.durationMs ?? null,
+      previousRunId: meta.previousRunId ?? null,
+      incomplete: meta.incomplete ?? false,
+    },
     comparisonNote:
       'Blocked, skipped, and not_tested checks are not counted as passes. Compare only equivalent environment and level sets.',
   };

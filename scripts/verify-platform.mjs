@@ -69,6 +69,32 @@ async function main() {
     null,
   );
 
+  const delayed = await executeRun(
+    {
+      runId: 'verify_delayed',
+      appId: 'defect-fixture',
+      environment: 'local',
+      inputMode: 'url',
+      levels: [1],
+      targetUrl: 'http://127.0.0.1:4177/fixtures/defect-app/delayed-render.html',
+    },
+    registry,
+    null,
+  );
+
+  const emptyRoot = await executeRun(
+    {
+      runId: 'verify_empty',
+      appId: 'defect-fixture',
+      environment: 'local',
+      inputMode: 'url',
+      levels: [1],
+      targetUrl: 'http://127.0.0.1:4177/fixtures/defect-app/empty-root.html',
+    },
+    registry,
+    null,
+  );
+
   const a11y = await executeRun(
     {
       runId: 'verify_a11y',
@@ -94,9 +120,15 @@ async function main() {
     if (!f) failedChecks.push(`Expected pass: ${checkId} in ${report.runId}`);
   };
 
+  assertPass(home, 'l1.readiness.application');
   assertFail(home, 'l1.links.broken');
   assertPass(home, 'l1.reachability.http-status');
   assertFail(errorPage, 'l1.js.uncaught-error');
+  assertPass(delayed, 'l1.readiness.application');
+  const emptyReady = emptyRoot.findings.find((f) => f.checkId === 'l1.readiness.application');
+  if (!emptyReady || emptyReady.status === 'pass') {
+    failedChecks.push('Expected empty-root readiness to fail or block, not pass');
+  }
   assertFail(mobile, 'l4.layout.overflow.mobile');
   const a11yFail = a11y.findings.some((f) => f.checkId.startsWith('l4.a11y.') && f.status === 'fail');
   if (!a11yFail) failedChecks.push('Expected axe violation on a11y fixture');

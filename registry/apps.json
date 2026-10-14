@@ -13,6 +13,10 @@
       "id": "hubsteria-care",
       "name": "HubsteriaCare",
       "description": "Residential care operations",
+      "readiness": {
+        "selector": "nav, [role='navigation'], main h1, #root main",
+        "timeoutMs": 20000
+      },
       "baseUrl": null,
       "environments": [
         { "id": "local", "label": "Local", "baseUrl": "http://localhost:3000", "mutationsAllowed": false },

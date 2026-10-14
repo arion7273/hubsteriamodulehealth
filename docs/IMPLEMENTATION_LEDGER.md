@@ -17,3 +17,7 @@
 | Credentials server-side | IMPLEMENTED_VERIFIED | `data/secrets.json` gitignored; refs only in registry |
 | Defect fixture app | IMPLEMENTED_VERIFIED | `fixtures/defect-app/` |
 | Cloud → cloud migration | IMPLEMENTED_VERIFIED | `migrate:export` / `migrate:import`, `docs/CLOUD_TO_CLOUD_MIGRATION.md` |
+| Browser session + readiness | IMPLEMENTED_VERIFIED | `engine/browser-session.mjs`, `l1.readiness.application` |
+| Structured report sections | IMPLEMENTED_VERIFIED | `structured` on report + ReportDetail UI |
+| Targeted retest API | IMPLEMENTED_UNVERIFIED | `POST /api/runs/:id/retest` |
+| Test packs B–G | NOT_STARTED / partial | See `engine/packs/README.md` |

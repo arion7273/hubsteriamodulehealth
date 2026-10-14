@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Delayed render fixture</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      setTimeout(() => {
+        document.getElementById('root').innerHTML = '<h1>Content loaded after delay</h1><p>Ready for health checks.</p><a href="/fixtures/defect-app/index.html">Home</a>';
+      }, 1800);
+    </script>
+  </body>
+</html>

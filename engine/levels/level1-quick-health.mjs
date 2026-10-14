@@ -1,27 +1,12 @@
-import { chromium } from 'playwright';
 import { createFinding } from '../findings.mjs';
 import { originFromUrl } from '../security/url-guard.mjs';
+import { openBrowserSession, createInstrumentedPage, setHtmlContent } from '../browser-session.mjs';
+import { waitForAppReadiness } from '../readiness.mjs';
+import { captureScreenshot, captureSanitizedDom } from '../evidence.mjs';
+import { applyPrerequisites } from '../prerequisites.mjs';
 
-/** Wait for SPAs / client bundles to paint readable text. */
-async function waitForVisibleBodyText(page, maxWaitMs) {
-  const start = Date.now();
-  let text = '';
-  while (Date.now() - start < maxWaitMs) {
-    text = (await page.locator('body').innerText().catch(() => '')).trim();
-    if (text.length > 0) break;
-    await page.waitForTimeout(300);
-  }
-  return { text, waitedMs: Date.now() - start };
-}
-
-async function detectClientShell(page) {
-  return page.evaluate(() => {
-    const root =
-      document.querySelector('#root, #app, [data-testid="root"], main') ?? document.body;
-    const htmlLen = root?.innerHTML?.length ?? 0;
-    const childCount = root?.children?.length ?? 0;
-    return { htmlLen, childCount };
-  });
+function blockedDependent(findings, reason) {
+  return applyPrerequisites(findings, 'l1.readiness.application', 'l1.links.');
 }
 
 /**
@@ -29,43 +14,26 @@ async function detectClientShell(page) {
  */
 export async function runLevel1QuickHealth(ctx) {
   const findings = [];
-  const { targetUrl, budgets, appId, environment, inputMode, htmlSnapshot } = ctx;
+  const {
+    targetUrl,
+    budgets,
+    appId,
+    environment,
+    inputMode,
+    htmlSnapshot,
+    app,
+    runId,
+  } = ctx;
   const pageLimit = budgets?.pageLimit ?? 15;
   const timeoutMs = budgets?.timeoutMs ?? 45000;
-
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    ignoreHTTPSErrors: false,
-    javaScriptEnabled: true,
-  });
-
-  const jsErrors = [];
-  const failedRequests = [];
-  const externalFailures = [];
-
-  context.on('page', (page) => {
-    page.on('pageerror', (err) => jsErrors.push(String(err.message || err)));
-    page.on('requestfailed', (req) => {
-      const url = req.url();
-      const failure = { url, error: req.failure()?.errorText };
-      try {
-        const reqOrigin = originFromUrl(url);
-        const baseOrigin = targetUrl ? originFromUrl(targetUrl) : null;
-        if (baseOrigin && reqOrigin === baseOrigin) failedRequests.push(failure);
-        else externalFailures.push(failure);
-      } catch {
-        externalFailures.push(failure);
-      }
-    });
-  });
-
-  const page = await context.newPage();
-  page.setDefaultTimeout(timeoutMs);
+  const readinessTimeout =
+    app?.readiness?.timeoutMs ?? budgets?.readinessTimeoutMs ?? Math.min(20_000, Math.floor(timeoutMs / 2));
+  const readinessSelector = app?.readiness?.selector ?? ctx.moduleSettings?.readinessSelector;
 
   const scopeNote =
     inputMode === 'html'
-      ? 'HTML snapshot: layout/links/JS only; backend/auth/persistence not verified.'
-      : 'Live URL: first-party network and navigation checks apply.';
+      ? 'HTML snapshot: layout/links/a11y on snapshot only; backend/auth/persistence not verified.'
+      : 'Live URL: browser-rendered assertions during initial navigation and readiness window.';
 
   findings.push(
     createFinding({
@@ -73,13 +41,21 @@ export async function runLevel1QuickHealth(ctx) {
       appId,
       environment,
       level: 1,
+      category: 'metadata',
       status: 'pass',
       severity: 'info',
       title: 'Test scope disclosed',
       actual: scopeNote,
-      expected: 'Honest scope labeling',
     }),
   );
+
+  const { browser, context } = await openBrowserSession();
+  const baseOrigin = targetUrl ? originFromUrl(targetUrl) : null;
+  const { page, session, navigate } = await createInstrumentedPage(context, baseOrigin);
+  page.setDefaultTimeout(timeoutMs);
+
+  let readiness = null;
+  let evidence = [];
 
   try {
     if (inputMode === 'html') {
@@ -93,130 +69,143 @@ export async function runLevel1QuickHealth(ctx) {
             status: 'blocked',
             severity: 'high',
             title: 'HTML input missing content',
-            userImpact: 'Cannot run layout checks without HTML body.',
-            remediation: { summary: 'Paste or upload HTML for snapshot mode.' },
           }),
         );
-        await browser.close();
         return findings;
       }
-      await page.setContent(htmlSnapshot.html, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+      await setHtmlContent(page, session, htmlSnapshot.html, timeoutMs);
+      readiness = await waitForAppReadiness(page, { timeoutMs: readinessTimeout, selector: readinessSelector });
     } else {
-      const response = await page.goto(targetUrl, { waitUntil: 'load', timeout: timeoutMs });
-      await page.waitForLoadState('networkidle', { timeout: Math.min(12_000, timeoutMs) }).catch(() => {});
-      if (!response) {
+      let response;
+      try {
+        response = await navigate(targetUrl, timeoutMs);
+      } catch (e) {
         findings.push(
           createFinding({
-            checkId: 'l1.reachability.response',
+            checkId: 'l1.navigation.outcome',
             appId,
             environment,
             level: 1,
             route: targetUrl,
             status: 'fail',
             severity: 'blocker',
-            title: 'No response from navigation',
-            expected: 'HTTP response received',
-            actual: 'Navigation returned null response',
-            reproduction: [`Open ${targetUrl}`],
+            title: 'Navigation failed',
+            actual: String(e?.message ?? e),
+            expected: 'Successful navigation',
           }),
         );
-      } else {
-        const status = response.status();
+        return findings;
+      }
+
+      findings.push(
+        createFinding({
+          checkId: 'l1.navigation.outcome',
+          appId,
+          environment,
+          level: 1,
+          category: 'metadata',
+          status: 'pass',
+          severity: 'info',
+          title: 'Navigation completed',
+          actual: `outcome=${session.navigationOutcome}, finalUrl=${session.finalUrl}`,
+          evidence: [{ type: 'nav', initialUrl: session.initialUrl, finalUrl: session.finalUrl, redirects: session.redirectChain }],
+        }),
+      );
+
+      const status = response?.status() ?? session.httpStatus;
+      findings.push(
+        createFinding({
+          checkId: 'l1.reachability.http-status',
+          appId,
+          environment,
+          level: 1,
+          category: 'metadata',
+          status: status && status < 400 ? 'pass' : 'fail',
+          severity: status && status < 400 ? 'info' : 'blocker',
+          title: 'HTTP status on entry navigation',
+          expected: '2xx or 3xx on initial response',
+          actual: String(status),
+          detail: 'HTTP status alone does not establish application readiness.',
+        }),
+      );
+
+      if (session.initialUrl !== session.finalUrl) {
+        const loginRedirect = /login|signin|auth/i.test(session.finalUrl);
         findings.push(
           createFinding({
-            checkId: 'l1.reachability.http-status',
+            checkId: 'l1.navigation.redirect',
             appId,
             environment,
-            route: targetUrl,
             level: 1,
-            status: status >= 400 ? 'fail' : 'pass',
-            severity: status >= 400 ? 'blocker' : 'info',
-            title: 'HTTP status on entry URL',
-            expected: '2xx or 3xx',
-            actual: String(status),
+            status: loginRedirect ? 'fail' : 'pass',
+            severity: loginRedirect ? 'high' : 'info',
+            title: loginRedirect ? 'Unexpected login redirect' : 'Entry URL redirected',
+            actual: `${session.initialUrl} → ${session.finalUrl}`,
+            expected: loginRedirect ? 'Stay on requested route or explicit auth policy' : 'Document redirect',
           }),
         );
-        if (status >= 300 && status < 400) {
-          findings.push(
-            createFinding({
-              checkId: 'l1.redirect.entry',
-              appId,
-              environment,
-              level: 1,
-              status: 'pass',
-              severity: 'info',
-              title: 'Entry URL redirected',
-              actual: response.headers()['location'] ?? 'redirect',
-            }),
-          );
-        }
       }
+
+      readiness = await waitForAppReadiness(page, {
+        timeoutMs: readinessTimeout,
+        selector: readinessSelector,
+      });
     }
 
     const title = await page.title();
-    const contentWaitMs = Math.min(10_000, Math.floor(timeoutMs / 3));
-    const { text: bodyText, waitedMs } = await waitForVisibleBodyText(page, contentWaitMs);
-    const shell = await detectClientShell(page);
-
     findings.push(
       createFinding({
         checkId: 'l1.content.title',
         appId,
         environment,
         level: 1,
+        category: 'metadata',
         status: title ? 'pass' : 'fail',
-        severity: title ? 'low' : 'medium',
+        severity: 'low',
         title: 'Document title present',
-        expected: 'Non-empty <title>',
         actual: title || '(empty)',
+        detail: 'Title metadata is not proof of rendered app readiness.',
       }),
     );
 
-    let blankStatus = bodyText.length > 0 ? 'pass' : 'fail';
-    let blankSeverity = bodyText.length > 0 ? 'info' : 'high';
-    let blankDetail = `length=${bodyText.length}, waitedMs=${waitedMs}`;
-    let blankRemediation = null;
+    const readinessStatus =
+      readiness.ready ? 'pass' : readiness.state === 'login_required' || readiness.state === 'access_denied' ? 'fail' : 'blocked';
 
-    if (bodyText.length === 0 && shell.htmlLen > 80 && shell.childCount > 0) {
-      blankStatus = 'blocked';
-      blankSeverity = 'medium';
-      blankDetail += `; client shell htmlLen=${shell.htmlLen} but no visible text (auth gate, bot block, or slow SPA)`;
-      blankRemediation = {
-        summary:
-          'Page returned a client shell without readable text. Use authenticated test mode, increase timeout, or verify the URL in a logged-in browser.',
-        steps: [
-          'Confirm the URL is reachable without login for anonymous health checks',
-          'If staff-only, configure test account auth (Phase B) before expecting content',
-        ],
-      };
-    } else if (bodyText.length === 0 && title) {
-      blankRemediation = {
-        summary:
-          'Title loaded but body stayed empty after waiting. Common for SPAs that need auth or block headless browsers.',
-      };
+    if (!readiness.ready && runId) {
+      try {
+        evidence.push(await captureScreenshot(page, runId, 'readiness-failed'));
+        evidence.push(await captureSanitizedDom(page, runId, 'readiness-failed'));
+      } catch {
+        /* evidence optional */
+      }
     }
 
     findings.push(
       createFinding({
-        checkId: 'l1.content.blank-screen',
+        checkId: 'l1.readiness.application',
         appId,
         environment,
         level: 1,
-        status: blankStatus,
-        severity: blankSeverity,
-        title: 'Page has visible text content',
-        expected: 'Body text length > 0 after load wait',
-        actual: blankDetail,
-        remediation: blankRemediation,
-        userImpact:
-          blankStatus === 'fail'
-            ? 'Users may see a blank screen or content that never appears.'
-            : null,
+        status: readinessStatus,
+        severity: readiness.ready ? 'info' : 'high',
+        title: 'Application readiness (rendered page)',
+        expected: 'Visible content, landmark, or configured readiness selector',
+        actual: `state=${readiness.state}, waitedMs=${readiness.waitedMs}, method=${readiness.method}, innerTextLen=${readiness.innerTextLen}, visibleLinks=${readiness.visibleLinks}`,
+        detail: `instrumentationComplete=${session.instrumentationComplete}, observationWindow=${session.observationWindow}`,
+        evidence,
+        remediation: readiness.ready
+          ? null
+          : {
+              summary: stateRemediation(readiness.state),
+            },
+        userImpact: readiness.ready ? null : 'Users may not see a working screen at this URL.',
+        acceptanceCriteria: 'Re-run Level 1; l1.readiness.application passes with state=ready.',
       }),
     );
 
-    if (jsErrors.length) {
-      for (const msg of jsErrors.slice(0, 5)) {
+    const windowLabel = session.observationWindow;
+    if (session.pageErrors.length) {
+      for (const msg of session.pageErrors.slice(0, 5)) {
         findings.push(
           createFinding({
             checkId: 'l1.js.uncaught-error',
@@ -225,10 +214,9 @@ export async function runLevel1QuickHealth(ctx) {
             level: 1,
             status: 'fail',
             severity: 'high',
-            title: 'Uncaught JavaScript error',
+            title: 'Uncaught JavaScript error during observation window',
             actual: msg,
-            expected: 'No uncaught errors on load',
-            reproduction: ['Load entry URL and observe console/page errors'],
+            detail: `No uncaught errors observed during ${windowLabel} (not a guarantee for the entire app).`,
           }),
         );
       }
@@ -241,13 +229,14 @@ export async function runLevel1QuickHealth(ctx) {
           level: 1,
           status: 'pass',
           severity: 'info',
-          title: 'No uncaught JavaScript errors on load',
+          title: 'No uncaught JavaScript errors during observation window',
+          actual: `window=${windowLabel}`,
         }),
       );
     }
 
-    if (failedRequests.length) {
-      for (const fr of failedRequests.slice(0, 10)) {
+    if (session.failedFirstParty.length) {
+      for (const fr of session.failedFirstParty.slice(0, 8)) {
         findings.push(
           createFinding({
             checkId: 'l1.network.first-party-failed',
@@ -256,9 +245,9 @@ export async function runLevel1QuickHealth(ctx) {
             level: 1,
             status: 'fail',
             severity: 'high',
-            title: 'Failed first-party request',
+            title: 'Failed first-party request during observation window',
             actual: `${fr.url} (${fr.error})`,
-            expected: 'First-party assets load successfully',
+            detail: `Observed during ${windowLabel}; not a claim of global network health.`,
           }),
         );
       }
@@ -271,12 +260,13 @@ export async function runLevel1QuickHealth(ctx) {
           level: 1,
           status: 'pass',
           severity: 'info',
-          title: 'No failed first-party requests on load',
+          title: 'No failed first-party requests during observation window',
+          actual: `window=${windowLabel}`,
         }),
       );
     }
 
-    if (externalFailures.length) {
+    if (session.failedExternal.length) {
       findings.push(
         createFinding({
           checkId: 'l1.network.external-failures',
@@ -285,74 +275,96 @@ export async function runLevel1QuickHealth(ctx) {
           level: 1,
           status: 'pass',
           severity: 'info',
-          title: 'External service failures noted separately',
-          actual: `${externalFailures.length} external failure(s) (not counted as app defects)`,
+          title: 'External request failures noted separately',
+          actual: `${session.failedExternal.length} external failure(s) during ${windowLabel}`,
         }),
       );
     }
 
-    const links = await page.locator('a[href]').evaluateAll((els) =>
-      els.map((a) => ({ href: a.getAttribute('href'), text: (a.textContent || '').trim().slice(0, 80) })),
-    );
-    const base = targetUrl ? new URL(targetUrl) : null;
-    let checked = 0;
-    for (const link of links) {
-      if (checked >= pageLimit) break;
-      if (!link.href || link.href.startsWith('#') || link.href.startsWith('mailto:')) continue;
-      let abs;
-      try {
-        abs = base ? new URL(link.href, base).href : link.href;
-      } catch {
-        continue;
-      }
-      if (base && originFromUrl(abs) !== originFromUrl(base.href)) continue;
-      checked++;
-      try {
-        const resp = await page.request.get(abs, { timeout: Math.min(15000, timeoutMs) });
-        if (resp.status() >= 400) {
+    // Link crawl only if readiness passed
+    if (readiness.ready && inputMode !== 'html') {
+      const links = await page.locator('a[href]').evaluateAll((els) =>
+        els.map((a) => ({
+          href: a.getAttribute('href'),
+          text: (a.textContent || '').trim().slice(0, 80),
+          visible: a.offsetParent !== null,
+        })),
+      );
+      const base = new URL(session.finalUrl || targetUrl);
+      let checked = 0;
+      let sameOriginCount = 0;
+      for (const link of links) {
+        if (!link.visible) continue;
+        if (!link.href || link.href.startsWith('#') || link.href.startsWith('mailto:')) continue;
+        let abs;
+        try {
+          abs = new URL(link.href, base).href;
+        } catch {
+          continue;
+        }
+        if (originFromUrl(abs) !== originFromUrl(base.href)) continue;
+        sameOriginCount++;
+        if (checked >= pageLimit) continue;
+        checked++;
+        try {
+          const resp = await page.request.get(abs, { timeout: Math.min(15_000, timeoutMs) });
+          if (resp.status() >= 400) {
+            findings.push(
+              createFinding({
+                checkId: 'l1.links.broken',
+                appId,
+                environment,
+                level: 1,
+                route: abs,
+                status: 'fail',
+                severity: 'medium',
+                title: 'Broken same-origin link',
+                actual: `HTTP ${resp.status()} for "${link.text}"`,
+              }),
+            );
+          }
+        } catch (e) {
           findings.push(
             createFinding({
               checkId: 'l1.links.broken',
               appId,
               environment,
               level: 1,
-              route: abs,
               status: 'fail',
               severity: 'medium',
-              title: 'Broken same-origin link',
-              expected: '2xx/3xx',
-              actual: `HTTP ${resp.status()} for "${link.text}"`,
-              reproduction: [`Click link: ${link.text}`, `URL: ${abs}`],
+              title: 'Link request failed',
+              actual: String(e?.message ?? e),
             }),
           );
         }
-      } catch (e) {
-        findings.push(
-          createFinding({
-            checkId: 'l1.links.broken',
-            appId,
-            environment,
-            level: 1,
-            route: abs,
-            status: 'fail',
-            severity: 'medium',
-            title: 'Link request failed',
-            actual: String(e?.message ?? e),
-          }),
-        );
       }
-    }
-    if (checked === 0) {
       findings.push(
         createFinding({
           checkId: 'l1.links.coverage',
           appId,
           environment,
           level: 1,
-          status: inputMode === 'html' ? 'pass' : 'not_tested',
+          status: sameOriginCount === 0 ? 'not_applicable' : 'pass',
           severity: 'info',
           title: 'Same-origin link crawl',
-          actual: 'No same-origin links to check',
+          actual:
+            sameOriginCount === 0
+              ? 'No visible same-origin links (SPA/router apps often have none in static HTML)'
+              : `checked ${checked} of ${sameOriginCount} visible same-origin link(s)`,
+        }),
+      );
+    } else if (!readiness.ready) {
+      findings.push(
+        createFinding({
+          checkId: 'l1.links.coverage',
+          appId,
+          environment,
+          level: 1,
+          status: 'blocked',
+          severity: 'info',
+          title: 'Same-origin link crawl',
+          blockedBy: 'l1.readiness.application',
+          actual: 'Blocked until application readiness passes',
         }),
       );
     }
@@ -360,5 +372,16 @@ export async function runLevel1QuickHealth(ctx) {
     await browser.close();
   }
 
-  return findings;
+  return blockedDependent(findings);
+}
+
+function stateRemediation(state) {
+  const map = {
+    login_required: 'Configure authenticated test access or use a public entry URL.',
+    access_denied: 'Verify role and tenant for this URL.',
+    bot_challenge: 'Headless browser may be blocked; use approved test environment or allowlist.',
+    blank_screen: 'Client shell without visible content — check bundle errors or auth gate.',
+    loading: 'Increase readiness timeout or set app.readiness.selector in registry.',
+  };
+  return map[state] ?? 'Investigate rendered page state with captured screenshot/DOM evidence.';
 }
