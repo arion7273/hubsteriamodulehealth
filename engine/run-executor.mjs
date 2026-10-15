@@ -10,6 +10,7 @@ import { structureReport } from './report-structure.mjs';
 import { deriveExecution, formatHeadline } from './report-execution.mjs';
 import { expandRetestCheckIds, mergeRetestFindings } from './retest-merge.mjs';
 import { attachToolInventory, normalizeRunReport } from './report-normalize.mjs';
+import { buildRunCoverage } from './run-coverage.mjs';
 import { assertUrlAllowed } from './security/url-guard.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -200,7 +201,8 @@ export async function executeRun(runRequest, registry, previousReport) {
   });
 
   const withTools = await attachToolInventory(draft, baseCtx);
-  return normalizeRunReport(withTools);
+  const coverage = buildRunCoverage(app, runRequest, withTools.toolInventory);
+  return normalizeRunReport({ ...withTools, coverage });
 }
 
 function buildReport(runRequest, app, findings, meta = {}) {
@@ -209,8 +211,13 @@ function buildReport(runRequest, app, findings, meta = {}) {
   const modulesConfigured = (app.modules ?? []).length;
   const modulesCovered = new Set(findings.filter((f) => f.moduleId).map((f) => f.moduleId)).size;
 
+  const levels = runRequest.levels ?? [1];
+  const moduleRoutesNotExercised =
+    modulesConfigured > 0 && modulesCovered === 0 && levels.length === 1 && levels[0] === 1;
+
   const headline = formatHeadline(execution, modulesConfigured, modulesCovered, {
     runBlocked: meta.blocked,
+    moduleRoutesNotExercised,
   });
 
   const failHigh = findings.filter(
@@ -255,7 +262,9 @@ function buildReport(runRequest, app, findings, meta = {}) {
       moduleCoverageNote:
         modulesConfigured === 0
           ? 'Module coverage not configured for this app.'
-          : `${modulesCovered} of ${modulesConfigured} module(s) referenced in findings.`,
+          : moduleRoutesNotExercised
+            ? `${modulesConfigured} module(s) registered; this run did not exercise module routes (typical for Level 1 URL-only). See coverage section.`
+            : `${modulesCovered} of ${modulesConfigured} module(s) referenced in findings.`,
     },
     tools: meta.toolRuns ?? [],
     packsExecuted: meta.packsExecuted ?? [],

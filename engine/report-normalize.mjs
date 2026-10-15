@@ -1,6 +1,7 @@
 import { structureReport } from './report-structure.mjs';
 import { deriveExecution, formatHeadline } from './report-execution.mjs';
 import { buildToolInventory } from './tool-inventory.mjs';
+import { buildRunCoverage } from './run-coverage.mjs';
 
 const UNAVAILABLE = 'Not recorded for this report';
 
@@ -89,6 +90,23 @@ export function normalizeRunReport(raw) {
       },
     },
     toolInventory: raw.toolInventory ?? null,
+    coverage:
+      raw.coverage ??
+      buildRunCoverage(
+        {
+          id: raw.appId,
+          modules: raw.modulesInventory ?? [],
+          repositoryPath: meta.repoRoot ?? null,
+          filesystemModuleRoot: null,
+          criticalWorkflows: [],
+        },
+        {
+          inputMode: raw.inputMode ?? 'url',
+          levels: raw.levels ?? [1],
+          packs: raw.packsExecuted?.length ? raw.packsExecuted : undefined,
+        },
+        raw.toolInventory ?? [],
+      ),
     consistency,
     comparisonNote:
       raw.comparisonNote ??

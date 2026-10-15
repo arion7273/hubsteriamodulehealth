@@ -31,6 +31,16 @@ export default function RunTest() {
   const selectedApp = useMemo(() => apps.find((a) => a.id === appId), [apps, appId]);
 
   useEffect(() => {
+    const im = params.get('inputMode');
+    const packParam = params.get('packs');
+    if (im === 'repository' || im === 'url' || im === 'html') setInputMode(im);
+    if (packParam) {
+      setUsePacks(true);
+      setSelectedPacks(packParam.split(',').map((s) => s.trim()).filter(Boolean));
+    }
+  }, [params]);
+
+  useEffect(() => {
     if (!apps.length) return;
     const app = apps.find((a) => a.id === appId);
     const env = app?.environments?.find((e) => e.id === environment);

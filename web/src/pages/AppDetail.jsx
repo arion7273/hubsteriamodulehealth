@@ -40,7 +40,16 @@ export default function AppDetail() {
           Status meanings: present / expected / disabled — not every discovered UI element is a requirement.
         </p>
       </div>
-      <Link to={`/run?app=${app.id}`}>Run tests for this app →</Link>
+        <p style={{ marginTop: '1rem' }}>
+          <Link to={`/run?app=${app.id}&packs=quick-health,ui-a11y`}>URL smoke + UI/a11y packs →</Link>
+          {' · '}
+          <Link to={`/run?app=${app.id}&inputMode=repository&packs=code-quality,security`}>
+            Repository code + security packs →
+          </Link>
+        </p>
+        <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+          Level 1 URL-only runs do not replace repository tests or module route walks. Use both when building features.
+        </p>
     </div>
   );
 }

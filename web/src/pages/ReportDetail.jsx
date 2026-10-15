@@ -174,6 +174,71 @@ export default function ReportDetail() {
         <button type="button" className="primary" onClick={retestFailed}>Rerun failed checks</button>
       </div>
 
+      {report.coverage && (
+        <div className="card" style={{ borderColor: report.coverage.isBuildAdequate ? undefined : 'rgba(251, 191, 36, 0.5)' }}>
+          <h3>Build coverage — {report.coverage.profileLabel}</h3>
+          {report.coverage.honestyNote && (
+            <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{report.coverage.honestyNote}</p>
+          )}
+          <p style={{ fontSize: '0.85rem' }}>
+            Input <strong>{report.coverage.inputMode}</strong>
+            {report.coverage.packs?.length ? ` · Packs: ${report.coverage.packs.join(', ')}` : ''}
+            {report.coverage.levels?.length ? ` · Levels: ${report.coverage.levels.join(', ')}` : ''}
+          </p>
+          <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse', marginTop: '0.75rem' }}>
+            <thead>
+              <tr>
+                <th align="left">Category</th>
+                <th align="left">This run</th>
+                <th align="left">If not run</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.coverage.categories?.map((c) => (
+                <tr key={c.id} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td>{c.label}</td>
+                  <td>{c.status === 'executed' ? '✓ Executed' : '— Not run'}</td>
+                  <td style={{ color: 'var(--muted)' }}>{c.reason ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {(report.coverage.modules?.length ?? 0) > 0 && (
+            <div style={{ marginTop: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.35rem' }}>Registered modules</h4>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.85rem' }}>
+                {report.coverage.modules.map((m) => (
+                  <li key={m.moduleId}>
+                    <strong>{m.label}</strong> ({(m.routes ?? []).join(', ') || 'no routes'}) — {m.note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {report.coverage.recommended?.checklist?.length > 0 && (
+            <ul style={{ marginTop: '1rem', paddingLeft: '1.25rem', fontSize: '0.85rem' }}>
+              {report.coverage.recommended.checklist.map((item) => (
+                <li key={item.label} style={{ marginBottom: '0.35rem' }}>
+                  {item.done ? '✓' : '○'} {item.label}
+                  {!item.done && item.action && (
+                    <span style={{ display: 'block', color: 'var(--muted)', marginLeft: '1rem' }}>
+                      {item.action.replace(/\*\*/g, '')}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {report.coverage.recommended?.runTestQuery && (
+            <p style={{ marginTop: '1rem' }}>
+              <Link to={report.coverage.recommended.runTestQuery} className="primary" style={{ display: 'inline-block', padding: '0.5rem 0.75rem', borderRadius: 8, textDecoration: 'none' }}>
+                Run broader build verification →
+              </Link>
+            </p>
+          )}
+        </div>
+      )}
+
       {report.toolInventory?.length > 0 && (
         <div className="card">
           <h3>Tool execution inventory</h3>

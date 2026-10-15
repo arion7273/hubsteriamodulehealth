@@ -45,6 +45,8 @@ export function formatHeadline(execution, modulesConfigured, modulesCovered, opt
 
   if (modulesConfigured === 0) {
     line += ' Module coverage not configured.';
+  } else if (modulesCovered === 0 && options.moduleRoutesNotExercised) {
+    line += ` ${modulesConfigured} module(s) in registry; none exercised in this run scope.`;
   } else {
     line += ` ${modulesCovered} of ${modulesConfigured} module(s) referenced in findings.`;
   }
