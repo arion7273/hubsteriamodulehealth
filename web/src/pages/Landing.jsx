@@ -22,7 +22,7 @@ function isLocalHost(host) {
 }
 
 function normalizeUrl(raw) {
-  const t = raw.trim();
+  const t = raw.trim().replace(/[,;.\s]+$/g, '');
   if (!t) return '';
   if (/^https?:\/\//i.test(t)) return t;
   const bare = t.replace(/^\/\//, '');

@@ -81,22 +81,15 @@ Moving between Cloud Agent VMs, Vercel + API split, or Railway/Fly hosts:
 
 Full runbook: [docs/CLOUD_TO_CLOUD_MIGRATION.md](docs/CLOUD_TO_CLOUD_MIGRATION.md).
 
-## Vercel (UI only)
+## Deploy (scans on Vercel previews)
 
-**Vercel Root Directory must be `web`** (Project Settings → General). Deploy config is only **`web/vercel.json`**: `npm ci` + `vite build` → `dist` (no Playwright).
+**Vercel Root Directory:** `web` (`web/vercel.json` → static Vite build).
 
-There is **no** repo-root `vercel.json` — a root config with `node scripts/…` breaks when Vercel’s working directory is already `web/`.
+Scans need a Playwright host. **Fastest:** deploy the repo **`Dockerfile`** on Railway or Render and use that URL for everything — see **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
-`web/package.json` includes `build:web` and `vercel-build` if you use a dashboard Build Command override.
+**Vercel + scanner:** deploy the Docker image, then set Vercel env **`SCANNER_API_ORIGIN`** to the scanner HTTPS origin and redeploy. Edge middleware proxies `/api` to the scanner.
 
-`hubsteriamodulehealth.vercel.app` serves the **static React build**. It does **not** run Playwright or `/api/*` unless you point the UI at a real API:
-
-1. Host the full app somewhere that runs `npm start` (VM, Railway, Fly.io, etc.).
-2. In Vercel project settings, set **`VITE_API_BASE`** to that API origin (e.g. `https://module-health-api.example.com`).
-3. On the API host, set **`CORS_ORIGINS`** to your Vercel URL (e.g. `https://hubsteriamodulehealth.vercel.app`).
-4. Redeploy both.
-
-Without this, Run test shows empty API data and **Run** cannot execute scans.
+Local all-in-one: `npm run start:prod` → http://localhost:4177
 
 ## Operating limits
 
