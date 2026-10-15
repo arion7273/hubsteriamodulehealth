@@ -13,6 +13,7 @@
     "module:health:example": "node scripts/run-module-health.mjs --manifest modules.manifest.json",
     "build:web": "npm install --prefix web && npm run build --prefix web",
     "start": "node server/index.mjs",
+    "start:prod": "npm run build:web && NODE_ENV=production node server/index.mjs",
     "dev:server": "node server/index.mjs",
     "verify:platform": "node scripts/verify-platform.mjs",
     "verify:adapters": "node scripts/verify-adapters.mjs",

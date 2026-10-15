@@ -1,0 +1,12 @@
+node_modules
+web/node_modules
+web/dist
+data/runs
+data/worker
+data/artifacts
+data/evidence
+.git
+.vexp
+reports
+*.md
+!README.md
