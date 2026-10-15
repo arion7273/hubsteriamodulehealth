@@ -1,6 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import BackendBanner from '../components/BackendBanner.jsx';
+import { useRegistry } from '../hooks/useRegistry.js';
 
 export default function AppLayout() {
+  const { apiOnline } = useRegistry();
+
   return (
     <div className="layout">
       <nav className="sidebar" aria-label="Main">
@@ -13,6 +17,7 @@ export default function AppLayout() {
         <NavLink to="/settings">Settings</NavLink>
       </nav>
       <main>
+        <BackendBanner apiOnline={apiOnline} />
         <Outlet />
       </main>
     </div>

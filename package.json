@@ -20,7 +20,7 @@
     "verify:reports": "node scripts/verify-report-consistency.mjs",
     "migrate:export": "node scripts/migrate-cloud-export.mjs",
     "migrate:import": "node scripts/migrate-cloud-import.mjs",
-    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform; npm run verify:adapters"
+    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform; npm run verify:adapters; npm run verify:reports"
   },
   "engines": {
     "node": ">=20"

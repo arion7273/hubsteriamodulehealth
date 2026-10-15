@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useRegistry } from '../hooks/useRegistry.js';
-import BackendBanner from '../components/BackendBanner.jsx';
-
 const LEVELS = [
   { id: 1, label: 'Level 1 — Quick health' },
   { id: 2, label: 'Level 2 — Module check' },
@@ -130,8 +128,6 @@ export default function RunTest() {
         snapshot UI; repository mode runs lint, typecheck, tests, and security scanners on a connected checkout —
         neither replaces the other.
       </p>
-
-      <BackendBanner apiOnline={apiOnline} />
 
       <div className="card stack">
         <label>Application</label>

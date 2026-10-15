@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../api.js';
 import { useRegistry } from '../hooks/useRegistry.js';
+import BackendBanner from '../components/BackendBanner.jsx';
 import './Landing.css';
 
 const SCAN_STEPS = [
@@ -135,9 +136,7 @@ export default function Landing() {
     }
 
     if (apiOnline === false) {
-      setError(
-        'Scan server not available on this host. Run npm start on a VM, or set VITE_API_BASE on Vercel to your API URL.',
-      );
+      setError('Scan API is not connected on this host — configure VITE_API_BASE or use a full local stack (npm start).');
       return;
     }
 
@@ -227,6 +226,12 @@ export default function Landing() {
           ))}
         </div>
 
+        {apiOnline === false && (
+          <div className="landing-hero-line" style={{ maxWidth: 640, margin: '0 auto 1rem' }}>
+            <BackendBanner apiOnline={apiOnline} />
+          </div>
+        )}
+
         <motion.form
           className="landing-card"
           onSubmit={handleScan}
@@ -264,7 +269,7 @@ export default function Landing() {
             <motion.button
               type="submit"
               className="landing-scan-btn"
-              disabled={phase === 'running'}
+              disabled={phase === 'running' || apiOnline !== true}
               whileHover={{ scale: phase === 'running' ? 1 : 1.03 }}
               whileTap={{ scale: 0.98 }}
             >
