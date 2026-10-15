@@ -74,6 +74,13 @@ function verifyReport(report) {
   for (const f of failWithEvidence) {
     assert.ok(f.evidence?.length || f.actual, `evidence for ${f.checkId}`);
   }
+
+  assert.ok(report.coverage?.categories?.length >= 5, 'coverage categories');
+  assert.equal(
+    report.coverage.categories.find((c) => c.id === 'live-url-health')?.status,
+    'executed',
+    'L1 coverage category',
+  );
 }
 
 async function main() {
@@ -135,6 +142,14 @@ async function main() {
   const eslint = live.toolInventory.find((t) => t.tool === 'ESLint');
   assert.equal(eslint?.executed, false, 'ESLint not executed on URL-only');
   assert.match(eslint?.executedReason ?? '', /repository|URL-only/i);
+
+  assert.ok(live.coverage?.honestyNote, 'narrow L1 run honesty note');
+  assert.ok(live.coverage.recommended?.packs?.length >= 1, 'recommended broader packs');
+  assert.equal(
+    live.coverage.categories.find((c) => c.id === 'code-quality')?.status,
+    'not_run',
+    'code-quality not run on URL L1',
+  );
 
   saveRun(live);
 
