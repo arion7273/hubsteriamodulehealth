@@ -58,6 +58,14 @@ Set at **build** time on Vercel to the scanner origin instead of using `SCANNER_
 | `CORS_ORIGINS` | Scanner | Comma-separated UI origins |
 | `HOST` | Scanner | `0.0.0.0` in production (Docker sets this) |
 | `PORT` | Scanner | Default `4177`; platforms inject their own |
+| `AI_GATEWAY_API_KEY` or `VERCEL_AI_API_KEY` | Scanner (Node) | [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) for report AI analysis (optional) |
+| `AI_GATEWAY_MODEL` | Scanner | Default `openai/gpt-4o-mini` |
+
+**Local:** copy `.env.example` → `.env`, set `AI_GATEWAY_API_KEY`, restart `npm start`. Never commit `.env`.
+
+**Railway/Render:** add the same variables in the service dashboard (not Vercel unless AI runs there — scans + AI should live on the Node host).
+
+`GET /api/ai/status` reports whether the gateway key is configured.
 
 ---
 

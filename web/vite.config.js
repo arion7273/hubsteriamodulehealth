@@ -8,7 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { '@registry': path.resolve(__dirname, '../registry') },
+    alias: {
+      '@registry': path.resolve(__dirname, '../registry'),
+      '@engine': path.resolve(__dirname, '../engine'),
+    },
   },
   server: { proxy: { '/api': 'http://127.0.0.1:4177' } },
   build: { outDir: 'dist', emptyOutDir: true },

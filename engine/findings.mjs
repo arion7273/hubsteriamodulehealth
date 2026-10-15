@@ -111,6 +111,10 @@ ${finding.actual ?? finding.detail ?? finding.title}
 ### Expected
 ${finding.expected ?? 'See product spec / module protocol.'}
 
+### Suggested fix
+${finding.remediation?.summary ?? finding.suspectedCause ?? 'See check documentation and re-run after change.'}
+${(finding.remediation?.steps ?? []).map((s) => `- ${s}`).join('\n')}
+
 ### Reproduction
 ${(finding.reproduction ?? []).map((s, i) => `${i + 1}. ${s}`).join('\n') || 'Run the same test level and scope from HubsteriaModuleHealth.'}
 

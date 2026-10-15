@@ -79,8 +79,13 @@ function skipReason(cat, inputMode, app) {
   if (cat.id === 'security' && inputMode === 'url') {
     return 'URL-only runs use passive scope only; full secret/dependency scans need **repository** mode + **security** pack.';
   }
-  if (cat.id === 'module-inventory' && !app.filesystemModuleRoot) {
-    return 'This app has module routes in the registry but no `filesystemModuleRoot` — L2 records inventory only until a repo path is configured.';
+  if (cat.id === 'module-inventory') {
+    if (!(app.modules ?? []).length || app.id === 'adhoc-url-scan') {
+      return 'Not applicable — ad-hoc URL scans do not use registered module inventory (L2).';
+    }
+    if (!app.filesystemModuleRoot) {
+      return 'This app has module routes in the registry but no `filesystemModuleRoot` — L2 records inventory only until a repo path is configured.';
+    }
   }
   if (cat.id === 'workflows') {
     return 'Workflow recipes need configured accounts and templates (`registry/workflows/templates.json`).';

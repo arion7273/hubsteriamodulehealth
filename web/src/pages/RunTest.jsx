@@ -27,18 +27,50 @@ export default function RunTest() {
   const [job, setJob] = useState(null);
   const [polling, setPolling] = useState(false);
   const [runError, setRunError] = useState('');
+  const [presets, setPresets] = useState([]);
+  const [presetId, setPresetId] = useState(params.get('preset') ?? '');
 
   const selectedApp = useMemo(() => apps.find((a) => a.id === appId), [apps, appId]);
 
   useEffect(() => {
+    if (apiOnline !== true) return;
+    api('/api/run-presets')
+      .then((data) => setPresets(data.presets ?? []))
+      .catch(() => setPresets([]));
+  }, [apiOnline]);
+
+  function applyPreset(id) {
+    const p = presets.find((x) => x.id === id);
+    if (!p) return;
+    setPresetId(id);
+    setInputMode(p.inputMode);
+    setUsePacks(true);
+    if (p.packs?.length) setSelectedPacks(p.packs);
+    if (p.levels?.length) setLevels(p.levels);
+  }
+
+  useEffect(() => {
     const im = params.get('inputMode');
     const packParam = params.get('packs');
-    if (im === 'repository' || im === 'url' || im === 'html') setInputMode(im);
-    if (packParam) {
-      setUsePacks(true);
-      setSelectedPacks(packParam.split(',').map((s) => s.trim()).filter(Boolean));
+    const levelParam = params.get('levels');
+    const presetParam = params.get('preset');
+    if (presetParam && presets.length) applyPreset(presetParam);
+    else {
+      if (im === 'repository' || im === 'url' || im === 'html') setInputMode(im);
+      if (packParam) {
+        setUsePacks(true);
+        setSelectedPacks(packParam.split(',').map((s) => s.trim()).filter(Boolean));
+      }
+      if (levelParam) {
+        setLevels(
+          levelParam
+            .split(',')
+            .map((s) => Number(s.trim()))
+            .filter((n) => !Number.isNaN(n)),
+        );
+      }
     }
-  }, [params]);
+  }, [params, presets]);
 
   useEffect(() => {
     if (!apps.length) return;
@@ -140,6 +172,38 @@ export default function RunTest() {
       </p>
 
       <div className="card stack">
+        {presets.length > 0 && (
+          <>
+            <label>Run preset</label>
+            <select
+              value={presetId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setPresetId(id);
+                if (id) applyPreset(id);
+              }}
+            >
+              <option value="">Custom</option>
+              {presets.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+            {presetId && (
+              <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: 0 }}>
+                {presets.find((p) => p.id === presetId)?.description}
+                {presets.find((p) => p.id === presetId)?.companionPresetId && (
+                  <>
+                    {' '}
+                    <Link to={`/run?app=${appId}&preset=${presets.find((p) => p.id === presetId).companionPresetId}`}>
+                      Run companion preset →
+                    </Link>
+                  </>
+                )}
+              </p>
+            )}
+          </>
+        )}
+
         <label>Application</label>
         <select value={appId} onChange={(e) => setAppId(e.target.value)}>
           {apps.map((a) => (

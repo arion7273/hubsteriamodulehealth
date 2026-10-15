@@ -149,7 +149,7 @@ export default function Landing() {
         appId: 'adhoc-url-scan',
         environment: 'custom',
         inputMode: 'url',
-        levels: [1],
+        packs: ['quick-health', 'ui-a11y'],
         targetUrl,
       };
       const { runId: id } = await api('/api/runs', { method: 'POST', body: JSON.stringify(body) });
@@ -216,12 +216,12 @@ export default function Landing() {
           <span className="gradient-text">Know what to fix.</span>
         </h1>
         <p className="landing-sub landing-hero-line">
-          Level 1 health checks with honest scope — links, errors, and first-party network. No fake
-          “100%” claims from partial coverage.
+          Paste any public URL — get a QAV5-style QA audit report (health, UI/a11y, scorecard, testing
+          checklist, printable HTML/PDF). Honest scope: no fake “100%” from a URL-only run.
         </p>
 
         <div className="landing-pills">
-          {['Quick health', 'Broken links', 'JS errors', 'Actionable report'].map((label) => (
+          {['Any URL', 'QA audit V5 export', 'A11y + health', 'Print to PDF'].map((label) => (
             <span key={label} className="landing-pill">{label}</span>
           ))}
         </div>

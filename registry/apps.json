@@ -103,7 +103,7 @@
     {
       "id": "adhoc-url-scan",
       "name": "Quick URL scan",
-      "description": "Ad-hoc scans from the landing page",
+      "description": "Paste any URL on the landing page — QAV5-style QA audit export (quick-health + ui-a11y packs)",
       "baseUrl": null,
       "environments": [
         {

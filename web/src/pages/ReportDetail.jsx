@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { apiUrl } from '../config.js';
+import { downloadFromApi } from '../lib/download-export.mjs';
+import { copyAndDownloadText, downloadRepairPrompt, fetchRepairPrompt } from '../lib/cursor-prompt-actions.mjs';
+import CursorPromptModal from '../components/CursorPromptModal.jsx';
 import EvidencePreview from '../components/EvidencePreview.jsx';
+import ReportFirstPanel from '../components/ReportFirstPanel.jsx';
 import { prerequisiteLabel } from '../lib/report-ui.mjs';
+import { categoryLabel } from '@engine/qa-audit-categories.mjs';
 
 function formatMeta(value, unavailable) {
   if (value != null && value !== '') return String(value);
@@ -10,10 +16,22 @@ function formatMeta(value, unavailable) {
 }
 
 function FindingRow({ f, runId, expanded, setExpanded, onRetest }) {
-  async function copyPrompt() {
-    const text = await api(`/api/findings/${runId}/${f.id}/cursor-prompt`);
-    await navigator.clipboard.writeText(text);
-    alert('Cursor fix prompt copied.');
+  const [promptModal, setPromptModal] = useState(null);
+
+  async function openCursorPrompt() {
+    const text = await fetchRepairPrompt(runId, { findingIds: [f.id], label: 'This issue' });
+    setPromptModal({
+      title: `Cursor prompt — ${f.checkId}`,
+      text,
+      filename: `module-health-${runId}-repair-${f.id}.md`,
+    });
+  }
+
+  async function downloadPrompt() {
+    await downloadRepairPrompt(runId, `module-health-${runId}-repair-${f.id}.md`, {
+      findingIds: [f.id],
+      label: 'This issue',
+    });
   }
 
   const prereq = prerequisiteLabel(f);
@@ -44,11 +62,19 @@ function FindingRow({ f, runId, expanded, setExpanded, onRetest }) {
         </button>
         {f.status === 'fail' && (
           <>
-            <button type="button" onClick={copyPrompt}>Copy Cursor fix prompt</button>
+            <button type="button" onClick={openCursorPrompt}>Cursor prompt…</button>
+            <button type="button" onClick={downloadPrompt}>Download prompt</button>
             <button type="button" onClick={() => onRetest(f.checkId)}>Retest this finding</button>
           </>
         )}
       </div>
+      <CursorPromptModal
+        open={Boolean(promptModal)}
+        title={promptModal?.title ?? ''}
+        text={promptModal?.text ?? ''}
+        downloadName={promptModal?.filename}
+        onClose={() => setPromptModal(null)}
+      />
       {expanded === f.id && (
         <>
           <EvidencePreview evidence={f.evidence} />
@@ -87,8 +113,12 @@ export default function ReportDetail() {
   const [expanded, setExpanded] = useState(null);
   const [showPassing, setShowPassing] = useState(false);
 
+  function loadReport() {
+    return api(`/api/runs/${runId}`).then(setReport);
+  }
+
   useEffect(() => {
-    api(`/api/runs/${runId}`).then(setReport);
+    loadReport();
   }, [runId]);
 
   if (!report) return <p>Loading…</p>;
@@ -121,9 +151,342 @@ export default function ReportDetail() {
     window.location.href = `/reports/${newId}`;
   }
 
+  async function copyGapAnalysis() {
+    const text = await api(`/api/runs/${runId}/gap-analysis-prompt`, {
+      method: 'POST',
+      body: JSON.stringify({
+        uiOrigin: window.location.origin,
+        moduleHealthApiBase: window.location.origin,
+      }),
+    });
+    await copyAndDownloadText(text, `module-health-${runId}-gap-analysis.md`);
+  }
+
+  async function copyComprehensiveAudit() {
+    const text = await api(`/api/runs/${runId}/comprehensive-audit-prompt`, {
+      method: 'POST',
+      body: JSON.stringify({
+        uiOrigin: window.location.origin,
+        moduleHealthApiBase: window.location.origin,
+      }),
+    });
+    await copyAndDownloadText(text, `module-health-${runId}-comprehensive-audit.md`);
+  }
+
+  async function copyFixPrompt() {
+    const text = await api(`/api/runs/${runId}/fix-prompt`, { method: 'POST', body: JSON.stringify({}) });
+    await copyAndDownloadText(text, `module-health-${runId}-fix-prompt.md`);
+  }
+
+  async function copyFixAllPrompt() {
+    const text = await api(`/api/runs/${runId}/fix-all-prompt`, {
+      method: 'POST',
+      body: JSON.stringify({
+        uiOrigin: window.location.origin,
+        moduleHealthApiBase: window.location.origin,
+      }),
+    });
+    await copyAndDownloadText(text, `module-health-${runId}-fix-all-prompt.md`);
+  }
+
+  async function copyReportAnalysis() {
+    const text = await api(`/api/runs/${runId}/report-analysis-prompt`, {
+      method: 'POST',
+      body: JSON.stringify({
+        uiOrigin: window.location.origin,
+        moduleHealthApiBase: window.location.origin,
+      }),
+    });
+    await copyAndDownloadText(text, `module-health-${runId}-report-analysis.md`);
+  }
+
+  const failFindings = (report.findings ?? []).filter((f) => f.status === 'fail');
+  const sectionFailCount =
+    appDefects.length +
+    runnerFailures.filter((f) => f.status === 'fail').length +
+    review.length;
+
+  const qa = report.qaAudit;
+  const auditBase = `/api/runs/${runId}`;
+
+  async function downloadFixAllPrompt() {
+    let fallbackText;
+    try {
+      fallbackText = await api(`/api/runs/${runId}/fix-all-prompt`, {
+        method: 'POST',
+        body: JSON.stringify({
+          uiOrigin: window.location.origin,
+          moduleHealthApiBase: window.location.origin,
+        }),
+      });
+    } catch {
+      /* fallback via download only */
+    }
+    await downloadFromApi(`${auditBase}/fix-all-prompt.md`, `module-health-${runId}-fix-all-prompt.md`, {
+      fallbackText,
+    });
+  }
+
+  async function downloadFixPrompt() {
+    let fallbackText;
+    try {
+      fallbackText = await api(`/api/runs/${runId}/fix-prompt`, { method: 'POST', body: JSON.stringify({}) });
+    } catch {
+      /* use API download only */
+    }
+    await downloadFromApi(`${auditBase}/fix-prompt.md`, `module-health-${runId}-fix-prompt.md`, {
+      fallbackText,
+    });
+  }
+
+  async function downloadCursorPack() {
+    await downloadFromApi(`${auditBase}/cursor-pack.md`, `module-health-${runId}-cursor-pack.md`, {
+      fallbackText: qa?.markdown
+        ? `# Cursor pack (offline fallback)\n\nServer export route unavailable — attach **qa-audit.md** content and \`report.json\` from this page after restart.\n\n---\n\n${qa.markdown}`
+        : undefined,
+    });
+  }
+
+  async function downloadFullJson() {
+    await downloadFromApi(`${auditBase}/export.json`, `module-health-${runId}.json`, {
+      fallbackJson: report,
+    });
+  }
+
+  async function downloadQaAuditMd() {
+    await downloadFromApi(`${auditBase}/audit.md?download=1`, `qa-audit-${runId}.md`, {
+      fallbackText: qa?.markdown,
+    });
+  }
+
   return (
     <div className="stack">
       <h2>{report.appName} — report</h2>
+
+      <ReportFirstPanel report={report} runId={runId} onRetest={retestFinding} onReportRefresh={loadReport} />
+
+      {failFindings.length > 0 && (
+        <div className="card" style={{ borderColor: 'rgba(248, 113, 113, 0.45)' }}>
+          <h3 style={{ marginTop: 0 }}>What you need to fix ({failFindings.length})</h3>
+          <ol style={{ margin: '0 0 0.75rem', paddingLeft: '1.25rem', fontSize: '0.95rem' }}>
+            {failFindings.map((f) => (
+              <li key={f.id} style={{ marginBottom: '0.5rem' }}>
+                <span className={`badge ${f.severity === 'high' || f.severity === 'blocker' ? 'fail' : 'blocked'}`}>
+                  {f.severity}
+                </span>{' '}
+                <code>{f.checkId}</code> — {f.title}
+                {f.remediation?.summary && (
+                  <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                    {f.remediation.summary}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+          <button type="button" className="primary" onClick={copyFixAllPrompt}>
+            Copy &amp; download fix-all prompt
+          </button>
+        </div>
+      )}
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Save &amp; download for Cursor</h3>
+        <p style={{ color: 'var(--muted)', fontSize: '0.9rem', margin: '0 0 0.75rem' }}>
+          Each run is saved on the server under <code>data/runs/{runId}.json</code> and{' '}
+          <code>data/exports/{runId}/</code>. Use <strong>fix-all prompt</strong> in your app repo; use the full pack
+          for audit markdown + JSON.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button type="button" className="primary" style={{ padding: '0.5rem 0.75rem', borderRadius: 8 }} onClick={copyFixAllPrompt}>
+            Copy &amp; download fix-all prompt
+          </button>
+          <button
+            type="button"
+            style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)' }}
+            onClick={downloadFixAllPrompt}
+          >
+            Download fix-all (.md)
+          </button>
+          <button type="button" style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)' }} onClick={downloadCursorPack}>
+            Download Cursor pack (.md)
+          </button>
+          <button
+            type="button"
+            style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)' }}
+            onClick={downloadFullJson}
+          >
+            Download full report (.json)
+          </button>
+          <button
+            type="button"
+            style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)' }}
+            onClick={downloadQaAuditMd}
+          >
+            Download QA audit (.md)
+          </button>
+          <button
+            type="button"
+            style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)' }}
+            onClick={downloadFixPrompt}
+          >
+            Download fix prompt (.md)
+          </button>
+        </div>
+      </div>
+
+      {report.comparison && (
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Progress vs earlier runs</h3>
+          {report.comparison.headline && <p>{report.comparison.headline}</p>}
+          <p style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+            First in chain:{' '}
+            <Link to={`/reports/${report.comparison.firstRunId}`}>{report.comparison.firstRunId}</Link>
+            {' · '}
+            Previous:{' '}
+            <Link to={`/reports/${report.comparison.previousRunId}`}>{report.comparison.previousRunId}</Link>
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.9rem' }}>
+            <span>
+              <strong>{report.comparison.vsFirst?.counts?.fixedCount ?? 0}</strong> fixed
+            </span>
+            <span>
+              <strong>{report.comparison.vsFirst?.counts?.stillFailingCount ?? 0}</strong> still failing
+            </span>
+            <span>
+              <strong>{report.comparison.vsFirst?.counts?.newFailureCount ?? 0}</strong> new
+            </span>
+            <span style={{ color: 'var(--muted)' }}>
+              Fails: {report.comparison.vsFirst?.counts?.baselineFails ?? '—'} →{' '}
+              {report.comparison.vsFirst?.counts?.currentFails ?? '—'}
+            </span>
+          </div>
+          {(report.comparison.vsFirst?.fixed?.length ?? 0) > 0 && (
+            <>
+              <h4 style={{ marginBottom: '0.25rem' }}>Fixed</h4>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.85rem' }}>
+                {report.comparison.vsFirst.fixed.map((row) => (
+                  <li key={row.checkId}>
+                    <code>{row.checkId}</code> — {row.baseline?.title ?? row.checkId}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <button type="button" className="primary" style={{ marginTop: '0.75rem' }} onClick={copyFixPrompt}>
+            Copy Cursor fix plan (with diff)
+          </button>
+        </div>
+      )}
+
+      {!qa && (
+        <div className="card" role="alert" style={{ borderColor: 'rgba(251, 191, 36, 0.55)' }}>
+          <h3 style={{ marginTop: 0 }}>QAV5 audit export not loaded</h3>
+          <p style={{ margin: '0.5rem 0', fontSize: '0.9rem' }}>
+            This page is the <strong>short</strong> dashboard. The consultant-style report needs a{' '}
+            <strong>restarted server</strong> and a <strong>fresh web build</strong> (already in repo).
+          </p>
+          <ol style={{ fontSize: '0.9rem', margin: '0.5rem 0', paddingLeft: '1.25rem' }}>
+            <li>Stop the server (Ctrl+C), then run: <code>npm run build:web && npm start</code></li>
+            <li>Hard-refresh this tab (Cmd+Shift+R)</li>
+            <li>
+              Open the QAV5 HTML export:{' '}
+              <a href={apiUrl(`${auditBase}/audit.html`)} target="_blank" rel="noreferrer">
+                /api/runs/{runId}/audit.html
+              </a>
+            </li>
+            <li>Run a <strong>new</strong> scan from the landing page (paste URL) — uses full QA packs</li>
+          </ol>
+          <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+            Reference PDF: <a href="/references/qav5.pdf" target="_blank" rel="noreferrer">qav5.pdf</a>
+          </p>
+        </div>
+      )}
+
+      {qa && (
+        <div className="card" style={{ borderColor: 'rgba(99, 102, 241, 0.45)' }}>
+          <h3 style={{ marginTop: 0 }}>
+            {qa.templateLabel ?? 'Website QA Audit Report — V5'}
+          </h3>
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+            Consultant-style outline (QAV5): executive summary, scorecard, testing guide checklist, findings by
+            category, appendices. Works for <strong>any URL</strong> (adhoc scan) or registered apps. Print HTML to PDF.
+            <a href={qa.referencePdfPath ?? '/references/qav5.pdf'} target="_blank" rel="noreferrer" style={{ marginLeft: '0.5rem' }}>
+              Open QAV5 reference PDF →
+            </a>
+          </p>
+          {qa.url && qa.url !== '—' && (
+            <p style={{ fontSize: '0.95rem' }}>
+              <strong>Site under test:</strong> {qa.site} — <code>{qa.url}</code>
+            </p>
+          )}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <a className="primary" style={{ padding: '0.5rem 0.75rem', borderRadius: 8, textDecoration: 'none' }} href={apiUrl(`${auditBase}/audit.html`)} target="_blank" rel="noreferrer">
+              Open printable HTML →
+            </a>
+            <button type="button" style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)' }} onClick={downloadQaAuditMd}>
+              Download Markdown
+            </button>
+          </div>
+          <p style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{qa.executiveNarrative}</p>
+          <h4>Scorecard</h4>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+            {['blocker', 'high', 'medium', 'low', 'info'].map((sev) => (
+              <div key={sev} style={{ background: '#121a26', borderRadius: 8, padding: '0.5rem 0.75rem', minWidth: '4.5rem' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase' }}>{sev}</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{qa.scorecard?.severityOpen?.[sev] ?? 0}</div>
+              </div>
+            ))}
+            <div style={{ background: '#121a26', borderRadius: 8, padding: '0.5rem 0.75rem' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Tools ran</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                {qa.scorecard?.toolsExecuted ?? 0}/{qa.scorecard?.toolsTotal ?? 0}
+              </div>
+            </div>
+          </div>
+          {(qa.testingGuideChecklist?.length ?? 0) > 0 && (
+            <>
+              <h4>Testing guide checklist</h4>
+              <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                <tbody>
+                  {qa.testingGuideChecklist.map((row) => (
+                    <tr key={row.id} style={{ borderTop: '1px solid var(--border)' }}>
+                      <td>{row.label}</td>
+                      <td>
+                        <span className={`badge ${row.status === 'pass' ? 'pass' : row.status === 'fail' ? 'fail' : 'blocked'}`}>
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+          {(qa.topConcerns?.length ?? 0) > 0 && (
+            <>
+              <h4>Top concerns</h4>
+              <ol style={{ fontSize: '0.9rem' }}>
+                {qa.topConcerns.map((c) => (
+                  <li key={c.checkId}>
+                    <strong>[{c.severity}]</strong> {c.title} — {c.summary ?? ''}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+          {qa.testingLimitations?.length > 0 && (
+            <>
+              <h4>Testing limitations (appendix)</h4>
+              <ul style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+                {qa.testingLimitations.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="card">
         <p><strong>Gate:</strong> {report.gate}</p>
         <p>{report.headline}</p>
@@ -171,8 +534,59 @@ export default function ReportDetail() {
             {report.meta.retestMode ? ` (${report.meta.retestMode})` : ''}
           </p>
         )}
-        <button type="button" className="primary" onClick={retestFailed}>Rerun failed checks</button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+          <button type="button" className="primary" onClick={retestFailed}>Rerun failed checks</button>
+          <button type="button" onClick={copyFixAllPrompt}>Copy &amp; download fix-all prompt</button>
+          <button type="button" onClick={downloadFixAllPrompt}>Download fix-all only</button>
+          <button type="button" onClick={copyFixPrompt}>Copy &amp; download fix plan</button>
+          <button type="button" onClick={downloadFixPrompt}>Download fix plan only</button>
+          <Link
+            to={`/run?app=${report.appId}&preset=comprehensive-build-url&inputMode=url&packs=quick-health%2Cui-a11y&levels=1%2C2%2C4`}
+            style={{ padding: '0.5rem 0.75rem', borderRadius: 8, border: '1px solid var(--border)', textDecoration: 'none' }}
+          >
+            Run comprehensive URL test
+          </Link>
+          <button type="button" onClick={copyGapAnalysis}>Copy gap analysis prompt</button>
+          <button type="button" onClick={copyComprehensiveAudit}>Copy comprehensive audit prompt</button>
+          <button type="button" onClick={copyReportAnalysis}>Copy report analysis prompt</button>
+        </div>
       </div>
+
+      {report.executiveSummary?.items?.length > 0 && (
+        <div className="card">
+          <h3>Executive summary — gaps &amp; critical issues ({report.executiveSummary.itemCount})</h3>
+          {report.executiveSummary.coverageNote && (
+            <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{report.executiveSummary.coverageNote}</p>
+          )}
+          <ol style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.9rem' }}>
+            {report.executiveSummary.items.map((item) => (
+              <li key={item.findingId} style={{ marginBottom: '0.75rem' }}>
+                <span className={`badge ${item.severity === 'blocker' || item.severity === 'high' ? 'fail' : 'blocked'}`}>
+                  {item.severity}
+                </span>
+                <strong> {item.title}</strong>
+                <span style={{ color: 'var(--muted)' }}> — {item.sectionLabel}</span>
+                {item.userImpact && (
+                  <p style={{ margin: '0.25rem 0', color: 'var(--muted)' }}>Impact: {item.userImpact}</p>
+                )}
+                {item.remediationSummary && (
+                  <p style={{ margin: '0.25rem 0' }}>Fix: {item.remediationSummary}</p>
+                )}
+                {item.evidenceRefs?.length > 0 && (
+                  <p style={{ margin: '0.25rem 0', fontSize: '0.8rem', color: 'var(--muted)' }}>
+                    Evidence: {item.evidenceRefs.join(' · ')}
+                  </p>
+                )}
+                {item.checkId && (
+                  <button type="button" style={{ marginTop: '0.25rem' }} onClick={() => retestFinding(item.retestCheckId)}>
+                    Retest {item.checkId}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {report.coverage && (
         <div className="card" style={{ borderColor: report.coverage.isBuildAdequate ? undefined : 'rgba(251, 191, 36, 0.5)' }}>
@@ -266,6 +680,48 @@ export default function ReportDetail() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {failFindings.length > 0 && sectionFailCount === 0 && (
+        <div className="card" role="alert" style={{ borderColor: 'rgba(251, 191, 36, 0.5)' }}>
+          <h3>Failures not mapped to sections</h3>
+          <p style={{ color: 'var(--muted)' }}>Showing raw fail findings — report was restructured; refresh if this persists.</p>
+          {failFindings.map((f) => (
+            <FindingRow
+              key={f.id}
+              f={f}
+              runId={runId}
+              expanded={expanded}
+              setExpanded={setExpanded}
+              onRetest={retestFinding}
+            />
+          ))}
+        </div>
+      )}
+
+      {qa?.findingsByCategory && (
+        <div className="card">
+          <h3>Findings by category (audit view)</h3>
+          {Object.entries(qa.findingsByCategory)
+            .filter(([, items]) => items.length > 0)
+            .map(([catId, items]) => (
+              <div key={catId} style={{ marginBottom: '1.25rem' }}>
+                <h4 style={{ margin: '0 0 0.5rem' }}>
+                  {categoryLabel(catId)} ({items.length})
+                </h4>
+                {items.map((f) => (
+                  <FindingRow
+                    key={f.id}
+                    f={f}
+                    runId={runId}
+                    expanded={expanded}
+                    setExpanded={setExpanded}
+                    onRetest={retestFinding}
+                  />
+                ))}
+              </div>
+            ))}
         </div>
       )}
 

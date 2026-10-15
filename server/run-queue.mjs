@@ -4,6 +4,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { listRuns, saveRun, loadRegistry, getRun } from './storage.mjs';
+import { persistRunExports } from './run-exports.mjs';
 import { DATA_DIR } from './storage.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -24,6 +25,7 @@ export function listJobs() {
 function pickPreviousReport(body) {
   const prevRuns = listRuns(body.appId).filter((r) => {
     if (r.environment !== body.environment) return false;
+    if (body.targetUrl && r.meta?.targetUrl && body.targetUrl !== r.meta.targetUrl) return false;
     if (body.packs?.length) {
       return JSON.stringify(r.packsExecuted ?? []) === JSON.stringify(body.packs);
     }
@@ -121,7 +123,9 @@ export async function enqueueRun(body) {
           job.progress = 100;
           job.message = 'Complete';
           saveRun(report);
-          job.report = report;
+          const normalized = getRun(runId);
+          persistRunExports(normalized ?? report);
+          job.report = normalized ?? report;
         } catch (e) {
           job.status = 'failed';
           job.message = String(e?.message ?? e);

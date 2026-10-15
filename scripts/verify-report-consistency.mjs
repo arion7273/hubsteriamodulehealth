@@ -75,6 +75,7 @@ function verifyReport(report) {
     assert.ok(f.evidence?.length || f.actual, `evidence for ${f.checkId}`);
   }
 
+  assert.ok(report.executiveSummary?.items != null, 'executive summary');
   assert.ok(report.coverage?.categories?.length >= 5, 'coverage categories');
   assert.equal(
     report.coverage.categories.find((c) => c.id === 'live-url-health')?.status,
@@ -111,6 +112,8 @@ async function main() {
   saveRun(normalized);
 
   const fromDisk = getRun('run_fixture_canonical_mixed');
+  assert.ok(fromDisk.reportFirst?.actionSummary, 'report-first view');
+  assert.ok(fromDisk.reportFirst.fixTheseFirst.cards.length >= 1, 'finding cards');
   verifyReport(fromDisk);
 
   const registry = loadRegistry();
@@ -150,6 +153,8 @@ async function main() {
     'not_run',
     'code-quality not run on URL L1',
   );
+  assert.equal(live.consistency?.ok, true, `live consistency: ${live.consistency?.issues?.join('; ')}`);
+  assert.ok(live.executiveSummary?.itemCount >= 0, 'live executive summary');
 
   saveRun(live);
 

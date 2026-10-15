@@ -1,8 +1,12 @@
+.env
+.env.local
 reports/
+data/ai-cache/
 migration-bundle.json
 data/secrets.json
 data/registry.apps.json
 data/runs/
+data/exports/
 data/evidence/
 data/artifacts/
 data/worker/

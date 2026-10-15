@@ -30,6 +30,17 @@ export const axeAdapter = {
       }
       const axe = await new AxeBuilder({ page }).analyze();
       for (const v of axe.violations ?? []) {
+        const nodeCount = v.nodes?.length ?? 0;
+        const samples = (v.nodes ?? []).slice(0, 5).map((n) => ({
+          type: 'selector',
+          value: (n.target ?? []).join(' '),
+          html: (n.html ?? '').replace(/\s+/g, ' ').slice(0, 160),
+        }));
+        const sampleLine = samples
+          .map((s) => s.value)
+          .filter(Boolean)
+          .slice(0, 3)
+          .join('; ');
         results.push(
           toFinding(
             {
@@ -41,10 +52,13 @@ export const axeAdapter = {
               status: STATUS.FAIL,
               severity: v.impact === 'critical' || v.impact === 'serious' ? 'high' : 'medium',
               title: `Accessibility: ${v.help}`,
-              actual: `${v.nodes?.length ?? 0} node(s); impact=${v.impact}`,
-              detail: 'Scanner finding — not a complete accessibility certification.',
+              expected: 'No axe violations for this rule on the scanned view.',
+              actual: `${nodeCount} element(s); impact=${v.impact}${sampleLine ? ` — e.g. ${sampleLine}` : ''}`,
+              detail: v.helpUrl ? `axe rule \`${v.id}\` — ${v.helpUrl}` : 'Scanner finding — not a complete accessibility certification.',
+              evidence: samples,
               scannerFinding: true,
               suspectedCause: v.description,
+              remediation: v.helpUrl ? { summary: null, steps: [`Docs: ${v.helpUrl}`] } : undefined,
               durationMs: Date.now() - start,
               fingerprint: fingerprint(['axe', v.id, v.help]),
             },

@@ -3,6 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PACK_DEFINITIONS } from '../engine/packs/definitions.mjs';
 import { normalizeRunReport } from '../engine/report-normalize.mjs';
+import { attachReportComparison } from '../engine/report-comparison.mjs';
+import { buildReportFirstView } from '../engine/report-first-view.mjs';
+import { getAiGatewayConfig } from '../engine/ai-config.mjs';
+import { aiAnalysisCacheKey, mergeAiIntoReportFirst } from '../engine/ai-report-analysis.mjs';
+import { loadAiCache } from './ai-cache.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = path.join(__dirname, '../data');
@@ -32,6 +37,7 @@ export function ensureDataDirs() {
   fs.mkdirSync(path.join(DATA_DIR, 'schedules'), { recursive: true });
   fs.mkdirSync(path.join(DATA_DIR, 'worker'), { recursive: true });
   fs.mkdirSync(path.join(DATA_DIR, 'artifacts'), { recursive: true });
+  fs.mkdirSync(path.join(DATA_DIR, 'ai-cache'), { recursive: true });
 }
 
 export function loadJson(filePath, fallback) {
@@ -78,10 +84,45 @@ export function saveRun(report) {
   return file;
 }
 
-export function getRun(runId) {
-  const raw = loadJson(path.join(RUNS_DIR, `${runId}.json`), null);
+const WORKER_DIR = path.join(DATA_DIR, 'worker');
+
+function normalizeRunBare(runId) {
+  let raw = loadJson(path.join(RUNS_DIR, `${runId}.json`), null);
+  if (!raw) {
+    const workerOut = path.join(WORKER_DIR, `${runId}-out.json`);
+    raw = loadJson(workerOut, null);
+  }
   if (!raw) return null;
-  return normalizeRunReport(raw);
+  try {
+    return normalizeRunReport(raw);
+  } catch (err) {
+    console.error(`[storage] normalize failed for run ${runId}:`, err);
+    return null;
+  }
+}
+
+export function getRun(runId) {
+  let raw = loadJson(path.join(RUNS_DIR, `${runId}.json`), null);
+  const fromWorker = !raw;
+  if (!raw) {
+    const workerOut = path.join(WORKER_DIR, `${runId}-out.json`);
+    raw = loadJson(workerOut, null);
+    if (!raw) return null;
+  }
+  const normalized = normalizeRunBare(runId);
+  if (!normalized) return null;
+  if (fromWorker) saveRun(normalized);
+  const withComparison = attachReportComparison(normalized, normalizeRunBare);
+  const reportFirst = buildReportFirstView(withComparison);
+  const cfg = getAiGatewayConfig();
+  const cacheEntry = loadAiCache(runId);
+  const key = aiAnalysisCacheKey(withComparison);
+  const cachedAnalysis =
+    cacheEntry?.cacheKey === key && cacheEntry?.analysis ? cacheEntry.analysis : null;
+  return {
+    ...withComparison,
+    reportFirst: mergeAiIntoReportFirst(reportFirst, cachedAnalysis, cfg),
+  };
 }
 
 export function loadModuleSettings(appId) {

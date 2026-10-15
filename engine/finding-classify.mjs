@@ -26,9 +26,15 @@ const RUNNER_CHECK_SUFFIXES = ['.preflight', '.crash', '.input-mode'];
  */
 export function classifyFindingOutcome(f) {
   if (f.status === 'pass' || f.status === 'not_applicable') return 'informational';
-  if (f.status === 'blocked') return 'runner_failure';
-
   const checkId = f.checkId ?? '';
+
+  if (f.status === 'blocked') {
+    if (checkId.startsWith('l1.') || checkId.startsWith('l2.') || checkId.startsWith('l3.') || checkId.startsWith('l4.')) {
+      return 'app_defect';
+    }
+    return 'runner_failure';
+  }
+
   const isRunner =
     RUNNER_CHECK_SUFFIXES.some((s) => checkId.endsWith(s)) ||
     RUNNER_CHECK_PREFIXES.some((p) => checkId.startsWith(p)) ||
@@ -36,6 +42,9 @@ export function classifyFindingOutcome(f) {
     (f.title && /runner crashed|not available/i.test(f.title));
 
   if (f.status === 'fail' && isRunner) return 'runner_failure';
+  if (f.status === 'fail' && checkId.startsWith('l1.')) {
+    return f.severity === 'medium' || f.severity === 'low' ? 'review' : 'app_defect';
+  }
   if (f.status === 'fail' && (f.severity === 'blocker' || f.severity === 'high')) return 'app_defect';
   if (f.status === 'fail') return 'review';
   if (f.status === 'not_tested' || f.status === 'skip' || f.status === 'not_started') return 'informational';

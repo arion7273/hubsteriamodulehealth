@@ -7,7 +7,7 @@ export async function api(path, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || res.statusText || `HTTP ${res.status}`);
+    throw new Error(err.message || err.error || res.statusText || `HTTP ${res.status}`);
   }
   const ct = res.headers.get('content-type') || '';
   if (ct.includes('application/json')) return res.json();

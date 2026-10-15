@@ -41,14 +41,43 @@ export default function AppDetail() {
         </p>
       </div>
         <p style={{ marginTop: '1rem' }}>
-          <Link to={`/run?app=${app.id}&packs=quick-health,ui-a11y`}>URL smoke + UI/a11y packs →</Link>
-          {' · '}
-          <Link to={`/run?app=${app.id}&inputMode=repository&packs=code-quality,security`}>
-            Repository code + security packs →
+          <Link
+            className="primary"
+            style={{ display: 'inline-block', padding: '0.5rem 0.75rem', borderRadius: 8, textDecoration: 'none' }}
+            to={`/run?app=${app.id}&preset=comprehensive-build-url`}
+          >
+            Comprehensive build verification (URL) →
           </Link>
         </p>
+        <p style={{ marginTop: '0.5rem' }}>
+          <Link to={`/run?app=${app.id}&preset=comprehensive-build-repo`}>
+            Comprehensive build verification (repository) →
+          </Link>
+          {' · '}
+          <Link to={`/run?app=${app.id}&packs=quick-health`}>Quick URL smoke only →</Link>
+        </p>
+        <p style={{ marginTop: '0.75rem' }}>
+          <button
+            type="button"
+            onClick={async () => {
+              const text = await api(`/api/apps/${app.id}/comprehensive-audit-prompt`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  environment: app.environments?.[0]?.id ?? 'production',
+                  uiOrigin: window.location.origin,
+                  moduleHealthApiBase: window.location.origin,
+                }),
+              });
+              await navigator.clipboard.writeText(text);
+              alert('Comprehensive audit prompt copied — paste into the target app repo in Cursor.');
+            }}
+          >
+            Copy Cursor comprehensive audit prompt
+          </button>
+        </p>
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-          Level 1 URL-only runs do not replace repository tests or module route walks. Use both when building features.
+          URL preset does not run repository security or unit tests — run both URL and repository presets before release.
+          See <code>docs/CURSOR_COMPREHENSIVE_AUDIT_PROMPT.md</code>.
         </p>
     </div>
   );

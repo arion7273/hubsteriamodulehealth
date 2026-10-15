@@ -2,6 +2,9 @@ import { structureReport } from './report-structure.mjs';
 import { deriveExecution, formatHeadline } from './report-execution.mjs';
 import { buildToolInventory } from './tool-inventory.mjs';
 import { buildRunCoverage } from './run-coverage.mjs';
+import { buildExecutiveSummary } from './report-executive-summary.mjs';
+import { ensureFindingRemediation } from './finding-remediation.mjs';
+import { attachQaAuditRender } from './qa-audit-document.mjs';
 
 const UNAVAILABLE = 'Not recorded for this report';
 
@@ -13,11 +16,10 @@ const UNAVAILABLE = 'Not recorded for this report';
 export function normalizeRunReport(raw) {
   if (!raw) return null;
 
-  const findings = Array.isArray(raw.findings) ? raw.findings : [];
-  const structured =
-    raw.structured?.sections?.app_defects || raw.structured?.sections?.defects
-      ? raw.structured
-      : structureReport(findings);
+  const findings = Array.isArray(raw.findings)
+    ? raw.findings.map(ensureFindingRemediation)
+    : [];
+  const structured = structureReport(findings);
 
   const execution = deriveExecution(findings);
   const modulesConfigured = raw.summary?.modulesConfigured ?? raw.modulesInventory?.length ?? 0;
@@ -48,7 +50,7 @@ export function normalizeRunReport(raw) {
 
   const consistency = validateConsistency(execution.counts, sectionCounts, structured.sections);
 
-  return {
+  const draft = {
     ...raw,
     reportSchemaVersion: raw.reportSchemaVersion ?? 3,
     headline,
@@ -90,27 +92,34 @@ export function normalizeRunReport(raw) {
       },
     },
     toolInventory: raw.toolInventory ?? null,
-    coverage:
-      raw.coverage ??
-      buildRunCoverage(
-        {
-          id: raw.appId,
-          modules: raw.modulesInventory ?? [],
-          repositoryPath: meta.repoRoot ?? null,
-          filesystemModuleRoot: null,
-          criticalWorkflows: [],
-        },
-        {
-          inputMode: raw.inputMode ?? 'url',
-          levels: raw.levels ?? [1],
-          packs: raw.packsExecuted?.length ? raw.packsExecuted : undefined,
-        },
-        raw.toolInventory ?? [],
-      ),
+    coverage: buildRunCoverage(
+      {
+        id: raw.appId,
+        modules: raw.modulesInventory ?? [],
+        repositoryPath: meta.repoRoot ?? null,
+        filesystemModuleRoot: null,
+        criticalWorkflows: [],
+      },
+      {
+        inputMode: raw.inputMode ?? 'url',
+        levels: raw.levels ?? [1],
+        packs: raw.packsExecuted?.length ? raw.packsExecuted : undefined,
+      },
+      raw.toolInventory ?? [],
+    ),
     consistency,
     comparisonNote:
       raw.comparisonNote ??
       'Completed means pass or fail. Blocked and not-executed checks are not passes. Compare equivalent environment and level sets.',
+  };
+
+  const withExec = {
+    ...draft,
+    executiveSummary: buildExecutiveSummary(draft),
+  };
+  return {
+    ...withExec,
+    qaAudit: attachQaAuditRender(withExec),
   };
 }
 

@@ -1,4 +1,5 @@
 import { classifyFindingOutcome } from './finding-classify.mjs';
+import { ensureFindingRemediation } from './finding-remediation.mjs';
 
 const SECTION_ORDER = [
   'app_defects',
@@ -11,6 +12,7 @@ const SECTION_ORDER = [
 ];
 
 export function structureReport(findings) {
+  const enriched = findings.map(ensureFindingRemediation);
   const sections = {
     app_defects: [],
     runner_failures: [],
@@ -25,7 +27,7 @@ export function structureReport(findings) {
     not_tested: [],
   };
 
-  for (const f of findings) {
+  for (const f of enriched) {
     const kind = classifyFindingOutcome(f);
     if (f.status === 'pass') {
       sections.passing.push(f);
