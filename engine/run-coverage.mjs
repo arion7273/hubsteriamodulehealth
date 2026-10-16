@@ -43,7 +43,8 @@ function levelsRun(runRequest) {
 }
 
 function packsRun(runRequest) {
-  if (runRequest.packs?.length) return runRequest.packs;
+  const explicit = (runRequest.packs ?? []).filter((p) => !/^level-\d+$/.test(p));
+  if (explicit.length) return explicit;
   const levels = levelsRun(runRequest);
   const inferred = [];
   if (levels.includes(1)) inferred.push('quick-health');
