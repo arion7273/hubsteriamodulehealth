@@ -3,9 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const EVIDENCE_ROOT = path.join(__dirname, '../data/evidence');
+const EVIDENCE_ROOT = path.join(__dirname, '../data/evidence');
 
-export function evidenceDirForRun(runId) {
+function evidenceDirForRun(runId) {
   const dir = path.join(EVIDENCE_ROOT, runId);
   fs.mkdirSync(dir, { recursive: true });
   return dir;

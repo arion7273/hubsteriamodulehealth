@@ -68,7 +68,7 @@ export function startScheduler() {
   }
 }
 
-export function stopScheduler() {
+function stopScheduler() {
   for (const t of tasks) t.stop();
   tasks.length = 0;
 }

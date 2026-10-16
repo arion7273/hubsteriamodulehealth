@@ -40,6 +40,7 @@ import {
   aiAnalysisCacheKey,
 } from '../engine/ai-report-analysis.mjs';
 import { loadAiCache, saveAiCache } from './ai-cache.mjs';
+import { resolvePromptApiBase } from './prompt-api-base.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -426,10 +427,7 @@ app.post('/api/apps/:appId/comprehensive-audit-prompt', (req, res) => {
   const app = reg.apps.find((a) => a.id === req.params.appId);
   if (!app) return res.status(404).json({ error: 'app not found' });
   const body = req.body ?? {};
-  const apiBase =
-    body.moduleHealthApiBase?.replace(/\/$/, '') ||
-    body.uiOrigin?.replace(/\/$/, '') ||
-    resolveModuleHealthApiBase(req);
+  const apiBase = resolvePromptApiBase(req, body, resolveModuleHealthApiBase);
   const text = buildComprehensiveAuditPrompt({
     app,
     moduleHealthApiBase: apiBase,
@@ -454,10 +452,7 @@ app.post('/api/runs/:runId/comprehensive-audit-prompt', (req, res) => {
     modules: report.modulesInventory ?? [],
   };
   const body = req.body ?? {};
-  const apiBase =
-    body.moduleHealthApiBase?.replace(/\/$/, '') ||
-    body.uiOrigin?.replace(/\/$/, '') ||
-    resolveModuleHealthApiBase(req);
+  const apiBase = resolvePromptApiBase(req, body, resolveModuleHealthApiBase);
   const text = buildComprehensiveAuditPrompt({
     app,
     moduleHealthApiBase: apiBase,

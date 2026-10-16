@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useRegistry } from '../hooks/useRegistry.js';
+import AppSelect from '../components/AppSelect.jsx';
 const LEVELS = [
   { id: 1, label: 'Level 1 — Quick health' },
   { id: 2, label: 'Level 2 — Module check' },
@@ -204,12 +205,7 @@ export default function RunTest() {
           </>
         )}
 
-        <label>Application</label>
-        <select value={appId} onChange={(e) => setAppId(e.target.value)}>
-          {apps.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
+        <AppSelect apps={apps} value={appId} onChange={setAppId} />
 
         <label>Environment</label>
         <select value={environment} onChange={(e) => setEnvironment(e.target.value)}>

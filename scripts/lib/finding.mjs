@@ -6,7 +6,7 @@
  * @param {Partial<import('./types.mjs').Finding>} partial
  * @returns {import('./types.mjs').Finding}
  */
-export function finding(partial) {
+function finding(partial) {
   const { evidence, ...rest } = partial;
   return {
     evidence: evidence ?? [],

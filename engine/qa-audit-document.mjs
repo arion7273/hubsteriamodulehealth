@@ -17,7 +17,7 @@ const SEV_ORDER = ['blocker', 'high', 'medium', 'low', 'info'];
 /**
  * @param {object} report - normalized
  */
-export function buildQaAuditDocument(report) {
+function buildQaAuditDocument(report) {
   const exec = report.executiveSummary ?? buildExecutiveSummary(report);
   const findings = report.findings ?? [];
   const byCategory = bucketByCategory(findings);
@@ -322,7 +322,7 @@ function buildToc(byCategory, limitations) {
 /**
  * @param {object} doc - from buildQaAuditDocument before markdown fill
  */
-export function renderQaAuditMarkdown(report, doc) {
+function renderQaAuditMarkdown(report, doc) {
   const lines = [
     `# ${doc.title}`,
     '',

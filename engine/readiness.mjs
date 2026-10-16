@@ -65,7 +65,7 @@ export async function waitForAppReadiness(page, options = {}) {
   };
 }
 
-export async function classifyPageState(page) {
+async function classifyPageState(page) {
   const url = page.url();
   const data = await page.evaluate(() => {
     const body = document.body;

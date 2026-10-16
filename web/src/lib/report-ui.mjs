@@ -1,3 +1,4 @@
+/** UI copy for blocked / not-tested findings (Report detail). */
 export function prerequisiteLabel(f) {
   if (f.blockedBy) return `Prerequisite not met: ${f.blockedBy}`;
   if (f.detail && /Blocked:/i.test(f.detail)) return f.detail;

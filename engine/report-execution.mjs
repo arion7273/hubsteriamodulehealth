@@ -1,11 +1,5 @@
 import { summarizeFindings } from './findings.mjs';
 
-/** Statuses that mean the check actually ran and produced pass/fail. */
-export const COMPLETED_STATUSES = new Set(['pass', 'fail']);
-
-/** Statuses that were planned but not executed. */
-export const NOT_EXECUTED_STATUSES = new Set(['not_tested', 'not_started', 'skip']);
-
 /**
  * Derive execution buckets from the same finding records used for summary counts.
  * @param {object[]} findings

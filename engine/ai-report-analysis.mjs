@@ -167,7 +167,7 @@ function validateAiAnalysis(parsed, report) {
   };
 }
 
-export function disabledState(message) {
+function disabledState(message) {
   return {
     status: 'disabled',
     label: 'AI analysis disabled',
@@ -175,18 +175,6 @@ export function disabledState(message) {
     analysisVersion: null,
     model: null,
     provider: null,
-    referencedFindingIds: [],
-  };
-}
-
-export function unavailableState(message) {
-  return {
-    status: 'unavailable',
-    label: 'AI analysis unavailable',
-    message,
-    analysisVersion: getAiGatewayConfig().analysisVersion,
-    model: null,
-    provider: 'vercel-ai-gateway',
     referencedFindingIds: [],
   };
 }

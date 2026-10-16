@@ -51,25 +51,8 @@ export function buildCursorFixPlanPrompt(report, opts = {}) {
       lines.push('');
     }
 
-    if (delta.stillFailing.length) {
-      lines.push('### Still failing — fix these first', '');
-      for (const row of delta.stillFailing) {
-        lines.push(`- **[${row.current?.severity ?? 'medium'}]** \`${row.checkId}\` — ${row.current?.title ?? ''}`);
-        if (row.current?.actual) lines.push(`  - Observed: ${row.current.actual}`);
-        if (row.current?.remediationSummary) lines.push(`  - Fix: ${row.current.remediationSummary}`);
-      }
-      lines.push('');
-    }
-
-    if (delta.newFailures.length) {
-      lines.push('### New failures (regressions or newly in scope)', '');
-      for (const row of delta.newFailures) {
-        lines.push(`- **[${row.current?.severity ?? 'medium'}]** \`${row.checkId}\` — ${row.current?.title ?? ''}`);
-        if (row.current?.actual) lines.push(`  - Observed: ${row.current.actual}`);
-        if (row.current?.remediationSummary) lines.push(`  - Fix: ${row.current.remediationSummary}`);
-      }
-      lines.push('');
-    }
+    appendFailureDeltaSection(lines, '### Still failing — fix these first', delta.stillFailing);
+    appendFailureDeltaSection(lines, '### New failures (regressions or newly in scope)', delta.newFailures);
   } else {
     lines.push(
       '_No prior run linked on this report. Run another scan on the same URL (same packs) to see fixed vs still-open checks._',
@@ -106,4 +89,20 @@ export function buildCursorFixPlanPrompt(report, opts = {}) {
   );
 
   return lines.join('\n');
+}
+
+/**
+ * @param {string[]} lines
+ * @param {string} heading
+ * @param {Array<{ checkId: string, current?: { severity?: string, title?: string, actual?: string, remediationSummary?: string } }>} rows
+ */
+function appendFailureDeltaSection(lines, heading, rows) {
+  if (!rows.length) return;
+  lines.push(heading, '');
+  for (const row of rows) {
+    lines.push(`- **[${row.current?.severity ?? 'medium'}]** \`${row.checkId}\` — ${row.current?.title ?? ''}`);
+    if (row.current?.actual) lines.push(`  - Observed: ${row.current.actual}`);
+    if (row.current?.remediationSummary) lines.push(`  - Fix: ${row.current.remediationSummary}`);
+  }
+  lines.push('');
 }
