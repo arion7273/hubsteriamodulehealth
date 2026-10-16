@@ -5,7 +5,7 @@ import { createFinding } from '../findings.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export function loadWorkflowTemplates() {
+function loadWorkflowTemplates() {
   const p = path.join(__dirname, '../../registry/workflows/templates.json');
   return JSON.parse(fs.readFileSync(p, 'utf8')).templates;
 }

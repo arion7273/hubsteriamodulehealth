@@ -10,7 +10,7 @@ export const QAV5_REFERENCE_PDF_PATH = '/references/qav5.pdf';
 export const QAV5_REFERENCE_TITLE = 'Website QA Audit Report — V5 (Re-test)';
 
 /** @type {{ id: string, label: string, checkIdPrefixes: string[] }[]} */
-export const QAV5_TESTING_GUIDE = [
+const QAV5_TESTING_GUIDE = [
   { id: 'tg.reachability', label: 'Entry URL responds (HTTP)', checkIdPrefixes: ['l1.reachability.', 'l1.navigation.'] },
   { id: 'tg.readiness', label: 'Application renders (readiness)', checkIdPrefixes: ['l1.readiness.'] },
   { id: 'tg.content', label: 'Visible content (not blank shell)', checkIdPrefixes: ['l1.content.'] },

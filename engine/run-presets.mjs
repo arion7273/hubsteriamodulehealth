@@ -40,7 +40,7 @@ export function listRunPresets() {
   return Object.values(RUN_PRESETS);
 }
 
-export function getRunPreset(id) {
+function getRunPreset(id) {
   return RUN_PRESETS[id] ?? null;
 }
 

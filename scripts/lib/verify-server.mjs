@@ -8,7 +8,7 @@ export function sleep(ms) {
  * @param {string} url
  * @param {number} [attempts]
  */
-export async function waitForServer(url, attempts = 40) {
+async function waitForServer(url, attempts = 40) {
   for (let i = 0; i < attempts; i++) {
     try {
       const res = await fetch(url);

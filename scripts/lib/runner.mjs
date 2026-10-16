@@ -9,7 +9,7 @@ const LAYER_ORDER = ['discovery', 'static', 'contract', 'smoke', 'integration', 
  * @param {string[]} [onlyCheckIds]
  * @param {string[]} [layers]
  */
-export async function runChecksForModule(ctx, onlyCheckIds, layers) {
+async function runChecksForModule(ctx, onlyCheckIds, layers) {
   const findings = [];
   const layerSet = layers ? new Set(layers) : null;
   const checks = CHECKS.filter((c) => {

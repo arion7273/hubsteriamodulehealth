@@ -17,7 +17,7 @@ import path from 'node:path';
  */
 
 /** @type {Record<string, (ctx: FixContext) => Promise<FixResult>|FixResult>} */
-export const FIX_HANDLERS = {
+const FIX_HANDLERS = {
   'env-sync-example': envSyncExample,
   'create-env-example': createEnvExample,
   'add-verify-script': addVerifyScript,

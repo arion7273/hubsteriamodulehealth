@@ -1,5 +1,3 @@
-import { fingerprint as fpHash } from './finding-id.mjs';
-
 /**
  * Compare current findings to baseline. Does not mark resolved if baseline missing or scanners failed.
  * @param {import('./types.mjs').CodeHealthFinding[]} current
@@ -84,6 +82,3 @@ export function buildBaselineFromReport(report) {
 /**
  * @param {import('./types.mjs').CodeHealthFinding[]} findings
  */
-export function findingsFingerprintSet(findings) {
-  return new Set(findings.map((f) => f.fingerprint || fpHash(JSON.stringify(f))));
-}

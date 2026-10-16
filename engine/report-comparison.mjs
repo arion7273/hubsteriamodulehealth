@@ -8,7 +8,7 @@ import { compareRunsDetailed } from './run-changes.mjs';
  * @param {object[]} findings
  * @returns {Map<string, object>}
  */
-export function indexFindingsByCheckId(findings) {
+function indexFindingsByCheckId(findings) {
   const map = new Map();
   for (const f of findings ?? []) {
     const checkId = f.checkId;
@@ -27,7 +27,7 @@ export function indexFindingsByCheckId(findings) {
  * @param {object[]} baselineFindings
  * @param {object[]} currentFindings
  */
-export function compareReportFindings(baselineFindings, currentFindings) {
+function compareReportFindings(baselineFindings, currentFindings) {
   const base = indexFindingsByCheckId(baselineFindings);
   const cur = indexFindingsByCheckId(currentFindings);
   const checkIds = new Set([...base.keys(), ...cur.keys()]);
@@ -94,7 +94,7 @@ function summarizeFinding(f) {
  * @param {string} runId
  * @param {(id: string) => { runId: string, meta?: object } | null} loadMeta
  */
-export function findOldestRunInChain(runId, loadMeta) {
+function findOldestRunInChain(runId, loadMeta) {
   let oldestId = runId;
   let cursor = loadMeta(runId);
   const seen = new Set([runId]);
@@ -116,7 +116,7 @@ export function findOldestRunInChain(runId, loadMeta) {
  * @param {object} report - normalized
  * @param {(id: string) => object | null} loadNormalizedRun - must not attach comparison (avoid recursion)
  */
-export function buildReportComparison(report, loadNormalizedRun) {
+function buildReportComparison(report, loadNormalizedRun) {
   const previousRunId = report.meta?.retestOf ?? report.meta?.previousRunId ?? null;
   if (!previousRunId) return null;
 

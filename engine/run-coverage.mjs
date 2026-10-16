@@ -205,9 +205,3 @@ function buildChecklist(categories) {
   }));
 }
 
-export function availablePacksForMode(inputMode) {
-  return packsForInputMode(inputMode).map((id) => ({
-    id,
-    ...PACK_DEFINITIONS[id],
-  }));
-}

@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 /**
  * @param {string} repoRoot
  */
-export async function collectGitMeta(repoRoot) {
+async function collectGitMeta(repoRoot) {
   const run = async (args) => {
     const { stdout } = await execFileAsync('git', args, { cwd: repoRoot });
     return stdout.trim();

@@ -5,7 +5,7 @@ import { buildCursorFixPlanPrompt } from '../engine/cursor-fix-prompt.mjs';
 import { buildCursorFixAllGapsPrompt } from '../engine/cursor-fix-all-prompt.mjs';
 import { DATA_DIR } from './storage.mjs';
 
-export function exportDirForRun(runId) {
+function exportDirForRun(runId) {
   return path.join(DATA_DIR, 'exports', runId);
 }
 

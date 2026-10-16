@@ -13,7 +13,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const DATA_DIR = path.join(__dirname, '../data');
 export const RUNS_DIR = path.join(DATA_DIR, 'runs');
 export const SETTINGS_DIR = path.join(DATA_DIR, 'settings');
-export const SECRETS_PATH = path.join(DATA_DIR, 'secrets.json');
 export const REGISTRY_USER_PATH = path.join(DATA_DIR, 'registry.apps.json');
 
 function defaultPackSettings() {
@@ -149,6 +148,3 @@ export function saveModuleSettings(appId, settings) {
   saveJson(path.join(SETTINGS_DIR, `${appId}.json`), settings);
 }
 
-export function loadSecrets() {
-  return loadJson(SECRETS_PATH, { accounts: {} });
-}

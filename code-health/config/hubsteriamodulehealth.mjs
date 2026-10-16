@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const repoRoot = path.join(__dirname, '..', '..');
+const repoRoot = path.join(__dirname, '..', '..');
 
 /** @type {import('../core/types.mjs').CodeHealthRepoConfig} */
 export default {
@@ -46,7 +46,7 @@ export default {
       'reports/**',
       'data/**',
       'web/dist/**',
-      'fixtures/defect-app/**',
+      'fixtures/**',
     ],
     assets: ['web/dist/**', 'node_modules/**', 'reports/**'],
   },

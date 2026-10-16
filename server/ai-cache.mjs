@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../data');
 const AI_CACHE_DIR = path.join(DATA_DIR, 'ai-cache');
 
-export function ensureAiCacheDir() {
+function ensureAiCacheDir() {
   fs.mkdirSync(AI_CACHE_DIR, { recursive: true });
 }
 
-export function aiCachePath(runId) {
+function aiCachePath(runId) {
   return path.join(AI_CACHE_DIR, `${runId}.json`);
 }
 
