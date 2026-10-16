@@ -53,6 +53,7 @@ import {
 } from '../engine/ai-report-analysis.mjs';
 import { loadAiCache, saveAiCache } from './ai-cache.mjs';
 import { resolvePromptApiBase } from './prompt-api-base.mjs';
+import { checkPlaywrightBrowsers } from '../engine/playwright-preflight.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -88,7 +89,15 @@ function requireMigrationAuth(req, res, next) {
   res.status(401).json({ error: 'migration auth required' });
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'hubsteriamodulehealth' }));
+app.get('/api/health', async (_req, res) => {
+  const pw = await checkPlaywrightBrowsers();
+  res.json({
+    ok: true,
+    service: 'hubsteriamodulehealth',
+    playwright: pw.ok ? 'ready' : 'missing',
+    playwrightDetail: pw.ok ? undefined : pw.reason,
+  });
+});
 
 /** Synthetic workflow-gap-fixture API — not production PHI. */
 app.get('/api/workflow-fixture/records', (req, res) => {

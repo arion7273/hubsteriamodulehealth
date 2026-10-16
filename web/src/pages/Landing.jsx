@@ -150,6 +150,7 @@ export default function Landing() {
         environment: 'custom',
         inputMode: 'url',
         packs: ['quick-health', 'ui-a11y'],
+        levels: [1, 4],
         targetUrl,
       };
       const { runId: id } = await api('/api/runs', { method: 'POST', body: JSON.stringify(body) });

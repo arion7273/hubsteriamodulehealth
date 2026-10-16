@@ -10,7 +10,7 @@ import { structureReport } from './report-structure.mjs';
 import { deriveExecution, formatHeadline } from './report-execution.mjs';
 import { expandRetestCheckIds, mergeRetestFindings } from './retest-merge.mjs';
 import { attachToolInventory, normalizeRunReport } from './report-normalize.mjs';
-import { buildRunCoverage, inferPacksFromLevels } from './run-coverage.mjs';
+import { buildRunCoverage, inferPacksFromLevels, inferLevelsFromPacks } from './run-coverage.mjs';
 import { identifyBuild } from './build-identification.mjs';
 import { assertUrlAllowed } from './security/url-guard.mjs';
 import fs from 'node:fs';
@@ -87,8 +87,9 @@ export async function executeRun(runRequest, registry, previousReport) {
     timeoutMs: runRequest.timeoutMs ?? moduleSettings.timeoutMs ?? app.budgets?.timeoutMs ?? global.defaultTimeoutMs,
   };
 
-  const levels = runRequest.levels ?? [1];
   const packs = runRequest.packs?.length ? runRequest.packs : null;
+  const levels =
+    runRequest.levels?.length ? runRequest.levels : packs?.length ? inferLevelsFromPacks(packs) : [1];
   const allFindings = [];
   const runStarted = Date.now();
   const runStartedAt = new Date(runStarted).toISOString();

@@ -10,6 +10,12 @@ import { loadRegistry, saveRun, getRun } from '../server/storage.mjs';
 import { buildToolInventory } from '../engine/tool-inventory.mjs';
 import { ensureLocalServer } from './lib/ensure-local-server.mjs';
 import { identifyFromGit } from '../engine/build-identification.mjs';
+import { buildRepairPlan } from '../engine/repair-plan.mjs';
+import { deriveExecution, formatHeadline } from '../engine/report-execution.mjs';
+import { buildCursorRepairPrompt } from '../engine/cursor-repair-prompt.mjs';
+import { getFixPlaybook } from '../engine/fix-playbooks.mjs';
+import { waitForAppReadiness } from '../engine/readiness.mjs';
+import { openBrowserSession, createInstrumentedPage } from '../engine/browser-session.mjs';
 
 function mk(status, i, extra = {}) {
   return createFinding({
@@ -118,6 +124,72 @@ async function main() {
   assert.ok(fromDisk.reportFirst.fixTheseFirst.cards.length >= 1, 'finding cards');
   assert.ok(fromDisk.reportFirst.decision?.recommendation, 'decision block');
   assert.ok(fromDisk.reportFirst.repairPlan?.steps?.length >= 1, 'repair plan');
+  const adhocPlan = buildRepairPlan({
+    appId: 'adhoc-url-scan',
+    inputMode: 'url',
+    levels: [1, 4, 5],
+    packsExecuted: ['quick-health', 'ui-a11y', 'security', 'load-recovery'],
+    findings: [
+      mk('fail', 90, { checkId: 'axe.rule.color-contrast', severity: 'high', title: 'Contrast' }),
+      mk('fail', 91, { checkId: 'l5.recovery.detect-failure', severity: 'medium', title: 'Recovery' }),
+      mk('blocked', 92, { checkId: 'zap.preflight', title: 'ZAP not available' }),
+      mk('not_tested', 93, { checkId: 'l3.workflows.none', title: 'No workflows' }),
+    ],
+  });
+  assert.ok(
+    adhocPlan.sections.some((s) => s.id === 'application' && s.steps.some((x) => x.checkId?.startsWith('axe.'))),
+    'adhoc plan: axe in application',
+  );
+  assert.ok(
+    !adhocPlan.sections.find((s) => s.id === 'application')?.steps.some((x) => x.checkId?.startsWith('l5.')),
+    'adhoc plan: l5 recovery not application',
+  );
+  assert.ok(
+    adhocPlan.sections.some((s) => s.id === 'environment'),
+    'adhoc plan: environment section',
+  );
+  assert.ok(
+    !adhocPlan.steps.some((s) => s.checkId === 'l3.workflows.none'),
+    'adhoc plan: omit workflows.none',
+  );
+
+  const blockedHeadline = formatHeadline(
+    deriveExecution([
+      mk('pass', 200),
+      mk('blocked', 201, { checkId: 'l1.links.coverage', title: 'links' }),
+    ]),
+    0,
+    0,
+    {},
+  );
+  assert.match(blockedHeadline, /not fully tested/i);
+  assert.doesNotMatch(blockedHeadline, /^All \d+ completed check\(s\) passed\./);
+
+  const crashFinding = mk('fail', 94, {
+    checkId: 'playwright-live.crash',
+    severity: 'blocker',
+    title: 'Playwright runner crashed',
+    actual: "browserType.launch: Executable doesn't exist — run npx playwright install",
+  });
+  const axeCrash = mk('fail', 95, {
+    checkId: 'axe-core.crash',
+    severity: 'blocker',
+    title: 'axe runner crashed',
+    actual: "Executable doesn't exist",
+  });
+  const runnerPrompt = buildCursorRepairPrompt({
+    appId: 'adhoc-url-scan',
+    inputMode: 'url',
+    findings: [crashFinding, axeCrash],
+    meta: { targetUrl: 'https://hubsteriacare.com' },
+  }, { findingIds: [crashFinding.id, axeCrash.id] });
+  assert.match(runnerPrompt, /Scanner host issue/i);
+  assert.match(runnerPrompt, /npx playwright install chromium/i);
+  assert.doesNotMatch(runnerPrompt, /Fix \*\*root causes\*\* where confirmed/);
+  const pwPlaybook = getFixPlaybook(crashFinding);
+  assert.match(pwPlaybook.steps.join(' '), /playwright install chromium/i);
+  assert.match(pwPlaybook.likelyFiles.join(' '), /Not applicable/i);
+
   verifyReport(fromDisk);
 
   const gitSelf = identifyFromGit(process.cwd());
@@ -126,6 +198,15 @@ async function main() {
   const registry = loadRegistry();
   const app = registry.apps.find((a) => a.id === 'defect-fixture');
   const { port, child: serverChild } = await ensureLocalServer(Number(process.env.PORT) || 4177);
+  const iframeShellUrl = `http://127.0.0.1:${port}/fixtures/iframe-shell/index.html`;
+  const { browser: iframeBrowser, context: iframeCtx } = await openBrowserSession();
+  const { page: iframePage, navigate: navIframe } = await createInstrumentedPage(iframeCtx, `http://127.0.0.1:${port}`);
+  await navIframe(iframeShellUrl, 20_000);
+  const iframeReady = await waitForAppReadiness(iframePage, { timeoutMs: 12_000 });
+  await iframeBrowser.close();
+  assert.equal(iframeReady.state, 'ready', `iframe-shell readiness: ${iframeReady.state}`);
+  assert.ok(iframeReady.innerTextLen > 0 || iframeReady.visibleLinks > 0, 'iframe-shell content detected');
+
   const targetUrl = `http://127.0.0.1:${port}/fixtures/defect-app/index.html`;
 
   const live = await executeRun(

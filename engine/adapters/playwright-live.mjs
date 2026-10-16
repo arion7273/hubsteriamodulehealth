@@ -1,3 +1,4 @@
+import { checkPlaywrightBrowsers } from '../playwright-preflight.mjs';
 import { runLevel1QuickHealth } from '../levels/level1-quick-health.mjs';
 import { runLevel3Workflows } from '../levels/level3-workflows.mjs';
 import { runLevel4Quality } from '../levels/level4-quality.mjs';
@@ -9,7 +10,8 @@ export const playwrightLiveAdapter = {
   version: '1.49+',
   inputModes: ['url', 'html'],
   async preflight() {
-    return { ok: true };
+    const pf = await checkPlaywrightBrowsers();
+    return pf.ok ? { ok: true } : { ok: false, reason: pf.reason };
   },
   async run(ctx) {
     const start = Date.now();

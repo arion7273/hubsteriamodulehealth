@@ -58,6 +58,18 @@ export function inferPacksFromLevels(levels) {
   return inferred;
 }
 
+/** Levels represented by selected packs (for report metadata when levels omitted). */
+export function inferLevelsFromPacks(packs) {
+  const levels = [];
+  if (packs.includes('quick-health')) levels.push(1);
+  if (packs.includes('code-quality')) levels.push(2);
+  if (packs.includes('workflow')) levels.push(3);
+  if (packs.includes('ui-a11y')) levels.push(4);
+  if (packs.includes('load-recovery')) levels.push(5);
+  if (packs.includes('security')) levels.push(2);
+  return [...new Set(levels)].sort((a, b) => a - b);
+}
+
 /**
  * Resolve pack ids for coverage/profile (ignores legacy `level-N` placeholders).
  * @param {object} runRequest

@@ -213,16 +213,28 @@ export default function ReportFirstPanel({ report, runId, onRetest, onReportRefr
         <div className="card">
           <h2 style={{ marginTop: 0, fontSize: '1.15rem' }}>Repair plan</h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>{rf.repairPlan.note}</p>
-          <ol style={{ fontSize: '0.9rem', paddingLeft: '1.25rem' }}>
-            {rf.repairPlan.steps.map((s) => (
-              <li key={`${s.order}-${s.findingId ?? s.checkId}`} style={{ marginBottom: '0.35rem' }}>
-                <span className={`badge ${s.priority === 'required' ? 'fail' : 'blocked'}`}>{s.priority}</span>
-                {s.title}{' '}
-                {s.checkId && <code style={{ fontSize: '0.75rem' }}>{s.checkId}</code>}
-                <div style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{s.rationale}</div>
-              </li>
-            ))}
-          </ol>
+          {(rf.repairPlan.sections?.length ? rf.repairPlan.sections : [{ id: 'all', label: 'All steps', steps: rf.repairPlan.steps }]).map(
+            (sec) => (
+              <div key={sec.id} style={{ marginTop: '0.75rem' }}>
+                <h3 style={{ fontSize: '0.95rem', margin: '0 0 0.35rem' }}>{sec.label}</h3>
+                <ol style={{ fontSize: '0.9rem', paddingLeft: '1.25rem', margin: 0 }}>
+                  {sec.steps.map((s) => (
+                    <li key={`${s.order}-${s.findingId ?? s.checkId ?? s.title}`} style={{ marginBottom: '0.35rem' }}>
+                      <span className={`badge ${s.priority === 'required' ? 'fail' : 'blocked'}`}>{s.priority}</span>
+                      {s.categoryLabel && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--muted)', marginRight: '0.35rem' }}>
+                          {s.categoryLabel} ·
+                        </span>
+                      )}
+                      {s.title}{' '}
+                      {s.checkId && <code style={{ fontSize: '0.75rem' }}>{s.checkId}</code>}
+                      <div style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{s.rationale}</div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ),
+          )}
         </div>
       )}
 

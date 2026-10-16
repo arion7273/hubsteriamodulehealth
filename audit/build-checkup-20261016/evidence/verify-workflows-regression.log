@@ -1,0 +1,6 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:workflows-regression
+> node scripts/verify-workflow-regression.mjs
+
+verify-workflow-regression: ok

@@ -36,9 +36,27 @@ const AXE_REGION = {
   ],
 };
 
+const RUNNER_PLAYWRIGHT_HOST = {
+  acceptanceCriteria: [
+    'Module Health runner can launch Chromium (no `playwright-live.crash` / `axe-core.crash`).',
+    'Re-run the same URL scan from the machine that hosts `npm start` — not a fix in the scanned site’s app repo.',
+  ],
+  steps: [
+    'On the **Module Health host** (this repo), run: `npx playwright install chromium`',
+    'Restart the server: `npm start` (or redeploy the scan worker).',
+    'Confirm Chromium launches (e.g. run checkPlaywrightBrowsers from engine/playwright-preflight.mjs or GET /api/health → playwright: ready).',
+    'Re-run the URL QA audit preset (quick-health + ui-a11y) against the same URL.',
+  ],
+  likelyFiles: [
+    'Not applicable — environment setup on the scan runner, not hubsteriacare.com source.',
+  ],
+};
+
 const BY_CHECK_ID = {
   'axe.rule.color-contrast': AXE_COLOR_CONTRAST,
   'axe.rule.region': AXE_REGION,
+  'playwright-live.crash': RUNNER_PLAYWRIGHT_HOST,
+  'axe-core.crash': RUNNER_PLAYWRIGHT_HOST,
 };
 
 /**
@@ -47,6 +65,13 @@ const BY_CHECK_ID = {
  */
 export function getFixPlaybook(finding) {
   const checkId = finding?.checkId ?? '';
+  const actual = String(finding?.actual ?? '');
+  if (
+    (checkId.endsWith('.crash') || checkId.endsWith('.preflight')) &&
+    /Executable doesn't exist|playwright install/i.test(actual)
+  ) {
+    return { ...RUNNER_PLAYWRIGHT_HOST, verifyCheckId: checkId };
+  }
   const base = BY_CHECK_ID[checkId] ?? {
     acceptanceCriteria: [
       `Module Health check \`${checkId}\` passes on re-run with the same scope.`,

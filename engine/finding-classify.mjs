@@ -15,6 +15,7 @@ const RUNNER_CHECK_PREFIXES = [
   'lighthouse.',
   'axe-core.',
   'playwright.',
+  'playwright-live.',
 ];
 
 const RUNNER_CHECK_SUFFIXES = ['.preflight', '.crash', '.input-mode'];
@@ -42,6 +43,9 @@ export function classifyFindingOutcome(f) {
     (f.title && /runner crashed|not available/i.test(f.title));
 
   if (f.status === 'fail' && isRunner) return 'runner_failure';
+  if (f.status === 'fail' && checkId.startsWith('l5.recovery')) {
+    return 'runner_failure';
+  }
   if (f.status === 'fail' && checkId.startsWith('axe.')) return 'app_defect';
   if (f.status === 'fail' && checkId.startsWith('l1.')) {
     return f.severity === 'medium' || f.severity === 'low' ? 'review' : 'app_defect';
@@ -50,5 +54,13 @@ export function classifyFindingOutcome(f) {
   if (f.status === 'fail') return 'review';
   if (f.status === 'not_tested' || f.status === 'skip' || f.status === 'not_started') return 'informational';
   return 'informational';
+}
+
+export function prerequisiteLabel(f) {
+  if (f.blockedBy) return `Prerequisite not met: ${f.blockedBy}`;
+  if (f.detail && /Blocked:/i.test(f.detail)) return f.detail;
+  if (f.status === 'not_tested') return f.detail ?? f.actual ?? 'Check was not executed in this run.';
+  if (f.status === 'blocked') return f.actual ?? f.detail ?? 'Blocked by run configuration or prerequisites.';
+  return f.remediation?.summary ?? f.detail ?? null;
 }
 

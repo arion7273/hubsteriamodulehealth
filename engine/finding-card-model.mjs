@@ -98,10 +98,14 @@ function plainFailureSummary(f) {
 
 function resolveCause(f, { requiresSourceInspection, outcomeKind }) {
   if (outcomeKind === 'runner_failure') {
+    const actual = String(f.actual ?? '');
+    const playwrightMissing = /Executable doesn't exist|playwright install/i.test(actual);
     return {
       tier: 'confirmed',
       label: 'Confirmed cause',
-      text: 'Scanner or runner did not complete successfully for this check.',
+      text: playwrightMissing
+        ? 'Module Health scan runner is missing Playwright Chromium (environment setup). This is not a defect on the URL under test.'
+        : 'Scanner or runner did not complete successfully for this check.',
       requiresSourceInspection: false,
     };
   }

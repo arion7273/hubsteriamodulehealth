@@ -2,6 +2,7 @@ import { buildFindingCard } from './finding-card-model.mjs';
 import { buildCursorFixPrompt } from './findings.mjs';
 import { buildCapabilityModes } from './capability-modes.mjs';
 import { getFixPlaybook } from './fix-playbooks.mjs';
+import { classifyFindingOutcome } from './finding-classify.mjs';
 
 export const REPAIR_PROMPT_MAX_ISSUES = 10;
 
@@ -28,6 +29,7 @@ export function buildCursorRepairPrompt(report, opts = {}) {
   }
 
   const modes = buildCapabilityModes(report).filter((m) => m.active).map((m) => m.label);
+  const runnerOnly = selected.every((f) => classifyFindingOutcome(f) === 'runner_failure');
   const lines = [
     '# Cursor repair prompt — Module Health',
     '',
@@ -45,15 +47,29 @@ export function buildCursorRepairPrompt(report, opts = {}) {
     '',
     '## Instructions for the Cursor agent',
     '',
-    '1. Read repository instructions (README, AGENTS.md) before editing.',
-    '2. Confirm each issue against the **current** codebase — do not assume paths from URL-only scans.',
-    '3. Fix **root causes** where confirmed; treat scanner output as **suspected** until verified in code.',
-    '4. Preserve unrelated behavior and the established design language.',
-    '5. After changes, run appropriate local checks and specify how to re-verify in Module Health.',
-    '6. Report changed files, verification evidence, and any unresolved blockers.',
-    '7. **Do not** claim completion because code changed — only because listed checks would pass on re-run.',
-    '',
   ];
+  if (runnerOnly) {
+    lines.push(
+      '> **Scanner host issue — not the scanned website.** These failures mean Playwright/Chromium is missing or broken on the machine running Module Health (`npm start`). **Do not** change hubsteriacare.com (or other target app) source for these checks.',
+      '',
+      '1. Work in the **hubsteriamodulehealth** repo (scan runner).',
+      '2. Run `npx playwright install chromium` and restart the server.',
+      '3. Re-run the same URL scan; `playwright-live.crash` / `axe-core.crash` should disappear.',
+      '4. Only after the runner works, address any **axe.rule.*** findings in the target app repo.',
+      '',
+    );
+  } else {
+    lines.push(
+      '1. Read repository instructions (README, AGENTS.md) before editing.',
+      '2. Confirm each issue against the **current** codebase — do not assume paths from URL-only scans.',
+      '3. Fix **root causes** where confirmed; treat scanner output as **suspected** until verified in code.',
+      '4. Preserve unrelated behavior and the established design language.',
+      '5. After changes, run appropriate local checks and specify how to re-verify in Module Health.',
+      '6. Report changed files, verification evidence, and any unresolved blockers.',
+      '7. **Do not** claim completion because code changed — only because listed checks would pass on re-run.',
+      '',
+    );
+  }
   if (batchNote) {
     lines.push(`> ${batchNote}`, '');
   }

@@ -32,7 +32,8 @@
     "health:audit": "node scripts/code-health-cli.mjs audit",
     "health:compare": "node scripts/code-health-cli.mjs compare",
     "health:plan": "node scripts/code-health-cli.mjs plan",
-    "health:baseline": "node scripts/code-health-cli.mjs baseline"
+    "health:baseline": "node scripts/code-health-cli.mjs baseline",
+    "postinstall": "npx playwright install chromium"
   },
   "engines": {
     "node": ">=20"

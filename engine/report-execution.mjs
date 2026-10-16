@@ -30,11 +30,16 @@ export function formatHeadline(execution, modulesConfigured, modulesCovered, opt
   const fail = counts.fail;
   const pass = counts.pass;
 
-  let line = fail === 0
-    ? `All ${pass} completed check(s) passed.`
-    : `${fail} check(s) failed; ${pass} passed of ${completed} completed.`;
+  let line;
+  if (fail > 0) {
+    line = `${fail} check(s) failed; ${pass} passed of ${completed} completed.`;
+  } else if (blocked > 0 || notExecuted > 0) {
+    line = `${pass} check(s) passed of ${completed} completed — site not fully tested.`;
+  } else {
+    line = `All ${pass} completed check(s) passed.`;
+  }
 
-  if (blocked > 0) line += ` ${blocked} blocked.`;
+  if (blocked > 0) line += ` ${blocked} blocked (prerequisites not met).`;
   if (notExecuted > 0) line += ` ${notExecuted} not executed.`;
 
   if (modulesConfigured === 0) {

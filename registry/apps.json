@@ -102,8 +102,8 @@
     },
     {
       "id": "adhoc-url-scan",
-      "name": "Quick URL scan",
-      "description": "Paste any URL on the landing page — QAV5-style QA audit export (quick-health + ui-a11y packs)",
+      "name": "URL QA audit",
+      "description": "Paste any URL — default run uses quick-health + ui-a11y (Playwright L1, axe, Lighthouse). Use Run test for smoke-only.",
       "baseUrl": null,
       "environments": [
         {
