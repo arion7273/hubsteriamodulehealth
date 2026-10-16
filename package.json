@@ -23,7 +23,16 @@
     "test:ai": "node scripts/test-ai-gateway.mjs",
     "migrate:export": "node scripts/migrate-cloud-export.mjs",
     "migrate:import": "node scripts/migrate-cloud-import.mjs",
-    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform; npm run verify:adapters; npm run verify:reports"
+    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform; npm run verify:adapters; npm run verify:reports",
+    "test:code-health": "node --test tests/code-health/*.test.mjs",
+    "health:audit": "node scripts/code-health-cli.mjs audit",
+    "health:compare": "node scripts/code-health-cli.mjs compare",
+    "health:plan": "node scripts/code-health-cli.mjs plan",
+    "health:baseline": "node scripts/code-health-cli.mjs baseline"
+  },
+  "devDependencies": {
+    "jscpd": "5.4.1",
+    "knip": "6.41.0"
   },
   "engines": {
     "node": ">=20"
