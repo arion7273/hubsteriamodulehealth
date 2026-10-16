@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Workflow fixture — create record</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; }
+    label { display: block; margin-top: 0.75rem; }
+    input { width: 100%; padding: 0.35rem; }
+    #status { margin-top: 1rem; font-weight: 600; }
+    .err { color: #b91c1c; }
+    .ok { color: #047857; }
+  </style>
+</head>
+<body>
+  <h1>Create record</h1>
+  <p id="variant-label"></p>
+  <label>Name <input id="record-name" name="name" /></label>
+  <label>Note <input id="record-note" name="note" /></label>
+  <button type="button" id="save-btn">Save</button>
+  <p id="status" role="status"></p>
+  <p><a href="list.html" id="to-list">Open list view</a></p>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const variant = params.get('variant') || 'fixed';
+    document.getElementById('variant-label').textContent = 'Variant: ' + variant;
+    const KEY = 'wf-record-name';
+    const NOTE_KEY = 'wf-record-note';
+    const saved = localStorage.getItem(KEY);
+    if (saved) document.getElementById('record-name').value = saved;
+    document.getElementById('save-btn').addEventListener('click', () => {
+      const name = document.getElementById('record-name').value.trim();
+      const note = document.getElementById('record-note').value.trim();
+      const status = document.getElementById('status');
+      if (variant === 'broken-validation' && !name) {
+        status.textContent = 'Saved';
+        status.className = 'ok';
+        return;
+      }
+      if (!name) {
+        status.textContent = 'Name is required';
+        status.className = 'err';
+        return;
+      }
+      if (variant === 'broken-persist') {
+        status.textContent = 'Saved';
+        status.className = 'ok';
+        return;
+      }
+      localStorage.setItem(KEY, name);
+      localStorage.setItem(NOTE_KEY, note);
+      status.textContent = 'Saved';
+      status.className = 'ok';
+    });
+  </script>
+</body>
+</html>

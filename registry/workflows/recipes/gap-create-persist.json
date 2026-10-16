@@ -1,0 +1,53 @@
+{
+  "id": "gap-create-persist",
+  "version": 1,
+  "label": "Create record → save → verify persistence after reload",
+  "successCriteria": "Saved message and localStorage retains record name after reload",
+  "testData": {
+    "recordName": "WF-{runId}",
+    "recordNote": "synthetic-note"
+  },
+  "setup": [{ "type": "clearStorage", "storage": "local" }],
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{baseUrl}/create.html?variant={variant}",
+      "title": "Open create form"
+    },
+    {
+      "type": "fill",
+      "selector": "#record-name",
+      "value": "{{testData.recordName}}",
+      "title": "Enter record name"
+    },
+    {
+      "type": "click",
+      "selector": "#save-btn",
+      "title": "Save record"
+    },
+    {
+      "type": "assertVisible",
+      "selector": "#status",
+      "textContains": "Saved",
+      "title": "Save confirmation visible"
+    },
+    {
+      "type": "assertPersisted",
+      "storage": "local",
+      "key": "wf-record-name",
+      "equals": "{{testData.recordName}}",
+      "title": "Persistence in localStorage"
+    },
+    {
+      "type": "navigate",
+      "url": "{baseUrl}/create.html?variant={variant}",
+      "title": "Reload create form"
+    },
+    {
+      "type": "assertValue",
+      "selector": "#record-name",
+      "equals": "{{testData.recordName}}",
+      "title": "Field repopulated after reload"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "gap-role-deny",
+  "version": 1,
+  "label": "Staff role denied admin export (UI and server)",
+  "setup": [{ "type": "clearStorage", "storage": "session" }],
+  "steps": [
+    { "type": "navigate", "url": "{baseUrl}/roles.html", "title": "Open role fixture" },
+    { "type": "click", "selector": "#staff", "title": "Select staff role" },
+    { "type": "click", "selector": "#admin-action", "title": "Attempt admin export" },
+    {
+      "type": "assertVisible",
+      "selector": "#ui-result",
+      "textContains": "Access denied",
+      "title": "UI blocks staff"
+    }
+  ]
+}

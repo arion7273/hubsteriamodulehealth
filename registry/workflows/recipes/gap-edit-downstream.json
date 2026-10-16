@@ -1,0 +1,33 @@
+{
+  "id": "gap-edit-downstream",
+  "version": 1,
+  "label": "Save record → list view shows updated value",
+  "testData": {
+    "recordName": "List-{runId}"
+  },
+  "setup": [{ "type": "clearStorage", "storage": "local" }],
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{baseUrl}/create.html?variant=fixed",
+      "title": "Open create (fixed persist)"
+    },
+    {
+      "type": "fill",
+      "selector": "#record-name",
+      "value": "{{testData.recordName}}"
+    },
+    { "type": "click", "selector": "#save-btn", "title": "Save" },
+    {
+      "type": "navigate",
+      "url": "{baseUrl}/list.html?variant={variant}",
+      "title": "Open downstream list"
+    },
+    {
+      "type": "assertVisible",
+      "selector": "#records",
+      "textContains": "{{testData.recordName}}",
+      "title": "List reflects saved record"
+    }
+  ]
+}

@@ -13,9 +13,21 @@ import {
   saveUserApp,
   listRuns,
   getRun,
+  loadNormalizedRunBare,
   loadModuleSettings,
   saveModuleSettings,
 } from './storage.mjs';
+import { compareRunsDetailed } from '../engine/run-changes.mjs';
+import { listComparableBaselineRuns } from '../engine/comparable-runs.mjs';
+import { buildWorkspaceBundle } from '../engine/workspace/build-workspace.mjs';
+import { loadWorkspaceState } from '../engine/workspace/store.mjs';
+import { runAiAnalysisForWorkspace, queueAiAnalysis } from '../engine/workspace/ai-queue.mjs';
+import {
+  createRepairPlan,
+  generateRepairPatch,
+  verifyRepair,
+  applyRepairPatch,
+} from '../engine/workspace/repair-worker.mjs';
 import { enqueueRun, cancelRun, getJob, listJobs } from './run-queue.mjs';
 import { scheduleStatus, startScheduler } from './scheduler.mjs';
 import { PACK_DEFINITIONS, packsForInputMode } from '../engine/packs/definitions.mjs';
@@ -77,6 +89,15 @@ function requireMigrationAuth(req, res, next) {
 }
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'hubsteriamodulehealth' }));
+
+/** Synthetic workflow-gap-fixture API — not production PHI. */
+app.get('/api/workflow-fixture/records', (req, res) => {
+  const role = String(req.headers['x-wf-role'] ?? 'guest').toLowerCase();
+  if (role !== 'admin') {
+    return res.status(403).json({ error: 'forbidden', role });
+  }
+  res.json({ records: [], synthetic: true });
+});
 
 app.get('/api/files', (req, res) => {
   const ref = req.query.path;
@@ -235,6 +256,107 @@ app.get('/api/runs/:runId', (req, res) => {
   const report = getRun(req.params.runId);
   if (!report) return res.status(404).json({ error: 'not found' });
   res.json(report);
+});
+
+app.get('/api/runs/:runId/workspace', (req, res) => {
+  const report = getRun(req.params.runId);
+  if (!report) return res.status(404).json({ error: 'not found' });
+  const state = loadWorkspaceState(report.runId);
+  res.json(buildWorkspaceBundle(report, state));
+});
+
+app.post('/api/runs/:runId/workspace/analyze', async (req, res) => {
+  const report = getRun(req.params.runId);
+  if (!report) return res.status(404).json({ error: 'not found' });
+  const force = req.body?.force === true;
+  if (force) {
+    try {
+      const analysis = await runAiAnalysisForWorkspace(report, { force: true });
+      const bundle = buildWorkspaceBundle(getRun(report.runId), loadWorkspaceState(report.runId));
+      return res.json({ analysis, workspace: bundle });
+    } catch (e) {
+      return res.status(502).json({ error: String(e?.message ?? e) });
+    }
+  }
+  queueAiAnalysis(report.runId, getRun);
+  res.status(202).json({ status: 'queued' });
+});
+
+app.post('/api/runs/:runId/workspace/repair/plan', async (req, res) => {
+  const report = getRun(req.params.runId);
+  if (!report) return res.status(404).json({ error: 'not found' });
+  const findingIds = req.body?.findingIds ?? [];
+  if (!findingIds.length) return res.status(400).json({ error: 'findingIds required' });
+  const result = await createRepairPlan(report, findingIds, { label: req.body?.label });
+  res.json(result);
+});
+
+app.post('/api/runs/:runId/workspace/repair/:repairId/patch', async (req, res) => {
+  const report = getRun(req.params.runId);
+  if (!report) return res.status(404).json({ error: 'not found' });
+  try {
+    const result = await generateRepairPatch(report, req.params.repairId, {
+      repoRoot: req.body?.repoRoot,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(502).json({ error: String(e?.message ?? e) });
+  }
+});
+
+app.post('/api/runs/:runId/workspace/repair/:repairId/apply', async (req, res) => {
+  const report = getRun(req.params.runId);
+  if (!report) return res.status(404).json({ error: 'not found' });
+  try {
+    const result = await applyRepairPatch(report.runId, req.params.repairId, {
+      repoRoot: req.body?.repoRoot,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(502).json({ error: String(e?.message ?? e) });
+  }
+});
+
+app.post('/api/runs/:runId/workspace/repair/:repairId/verify', async (req, res) => {
+  const report = getRun(req.params.runId);
+  if (!report) return res.status(404).json({ error: 'not found' });
+  try {
+    const result = await verifyRepair(report.runId, req.params.repairId, {
+      verifyCommandId: req.body?.verifyCommandId,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(502).json({ error: String(e?.message ?? e) });
+  }
+});
+
+app.get('/api/runs/:runId/comparable-baselines', (req, res) => {
+  const current = loadNormalizedRunBare(req.params.runId);
+  if (!current) return res.status(404).json({ error: 'not found' });
+  const baselines = listComparableBaselineRuns(current, listRuns(current.appId));
+  res.json({ runId: current.runId, baselines });
+});
+
+app.get('/api/runs/:runId/comparison', (req, res) => {
+  const current = loadNormalizedRunBare(req.params.runId);
+  if (!current) return res.status(404).json({ error: 'not found' });
+  const baselineRunId =
+    req.query.baselineRunId ?? current.meta?.retestOf ?? current.meta?.previousRunId ?? null;
+  if (!baselineRunId) {
+    return res.json({
+      available: false,
+      message: 'No baseline run linked. Retest from a prior report or pass baselineRunId.',
+    });
+  }
+  const baseline = loadNormalizedRunBare(baselineRunId);
+  if (!baseline) return res.status(404).json({ error: 'baseline not found' });
+  const changes = compareRunsDetailed(baseline, current);
+  res.json({
+    available: true,
+    baselineRunId,
+    currentRunId: current.runId,
+    changes,
+  });
 });
 
 app.get('/api/runs/:runId/audit.md', (req, res) => {

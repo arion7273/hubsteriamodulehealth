@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Workflow fixture — list</title>
+</head>
+<body>
+  <h1>Records list</h1>
+  <p>Variant: <span id="variant"></span></p>
+  <ul id="records"></ul>
+  <a href="create.html">Back to create</a>
+  <script>
+    const variant = new URLSearchParams(location.search).get('variant') || 'fixed';
+    document.getElementById('variant').textContent = variant;
+    const ul = document.getElementById('records');
+    const name = localStorage.getItem('wf-record-name');
+    if (variant === 'broken-downstream') {
+      ul.innerHTML = '<li>Stale placeholder (not updated)</li>';
+    } else if (name) {
+      ul.innerHTML = '<li>' + name + '</li>';
+    } else {
+      ul.innerHTML = '<li>No records</li>';
+    }
+  </script>
+</body>
+</html>

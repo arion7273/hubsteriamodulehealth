@@ -1,0 +1,18 @@
+{
+  "id": "gap-nav",
+  "version": 1,
+  "label": "Navigation reaches expected next page",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{baseUrl}/nav-{variant}.html",
+      "title": "Open nav fixture"
+    },
+    { "type": "click", "selector": "#next", "title": "Follow continue link", "assertAfter": "navigation" },
+    {
+      "type": "assertUrl",
+      "pattern": "create.html",
+      "title": "Landed on create page"
+    }
+  ]
+}

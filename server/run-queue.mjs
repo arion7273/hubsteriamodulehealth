@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { listRuns, saveRun, loadRegistry, getRun } from './storage.mjs';
 import { persistRunExports } from './run-exports.mjs';
+import { queueAiAnalysis } from '../engine/workspace/ai-queue.mjs';
 import { DATA_DIR } from './storage.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -126,6 +127,9 @@ export async function enqueueRun(body) {
           const normalized = getRun(runId);
           persistRunExports(normalized ?? report);
           job.report = normalized ?? report;
+          if (normalized?.runId) {
+            queueAiAnalysis(normalized.runId, getRun, { auto: true });
+          }
         } catch (e) {
           job.status = 'failed';
           job.message = String(e?.message ?? e);

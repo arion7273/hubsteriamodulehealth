@@ -3,6 +3,8 @@ import { buildCursorFixPrompt } from './findings.mjs';
 import { buildCapabilityModes } from './capability-modes.mjs';
 import { getFixPlaybook } from './fix-playbooks.mjs';
 
+export const REPAIR_PROMPT_MAX_ISSUES = 10;
+
 /**
  * Deterministic repair prompt (no AI required).
  * @param {object} report
@@ -13,7 +15,13 @@ import { getFixPlaybook } from './fix-playbooks.mjs';
 export function buildCursorRepairPrompt(report, opts = {}) {
   const openFails = (report.findings ?? []).filter((f) => f.status === 'fail');
   const idSet = opts.findingIds?.length ? new Set(opts.findingIds) : null;
-  const selected = idSet ? openFails.filter((f) => idSet.has(f.id)) : openFails;
+  let selected = idSet ? openFails.filter((f) => idSet.has(f.id)) : openFails;
+  const maxIssues = opts.maxIssues ?? (idSet ? selected.length : REPAIR_PROMPT_MAX_ISSUES);
+  let batchNote = null;
+  if (!idSet && selected.length > maxIssues) {
+    batchNote = `Batch limited to ${maxIssues} of ${openFails.length} open issues. Use **selected issues** prompts for additional batches — do not rewrite the whole application in one pass.`;
+    selected = selected.slice(0, maxIssues);
+  }
 
   if (!selected.length) {
     return `# Module Health repair prompt\n\nNo open failures selected (run ${report.runId}).\n`;
@@ -45,9 +53,11 @@ export function buildCursorRepairPrompt(report, opts = {}) {
     '6. Report changed files, verification evidence, and any unresolved blockers.',
     '7. **Do not** claim completion because code changed — only because listed checks would pass on re-run.',
     '',
-    '---',
-    '',
   ];
+  if (batchNote) {
+    lines.push(`> ${batchNote}`, '');
+  }
+  lines.push('---', '');
 
   selected.forEach((f, idx) => {
     const card = buildFindingCard(f, report);
@@ -67,11 +77,12 @@ export function buildCursorRepairPrompt(report, opts = {}) {
     lines.push(`- **Expected:** ${card.expected}`);
     lines.push(`- **Actual:** ${card.actual}`);
     lines.push('');
-    if (card.cause.suspected || card.cause.confirmed) {
-      lines.push(`### ${card.cause.label}`);
-      lines.push(card.cause.confirmed ?? card.cause.suspected ?? '');
-      lines.push('');
+    lines.push(`### ${card.cause.label} (${card.cause.tier})`);
+    lines.push(card.cause.text);
+    if (card.requiresSourceInspection) {
+      lines.push('', '_Source inspection required — do not invent file paths from URL-only evidence._');
     }
+    lines.push('');
     lines.push('### Recommended fix');
     lines.push(card.recommendedFix);
     pb.steps.forEach((s) => lines.push(`- ${s}`));

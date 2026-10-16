@@ -262,8 +262,33 @@ export default function ReportDetail() {
   return (
     <div className="stack">
       <h2>{report.appName} — report</h2>
+      <p>
+        <Link className="primary" style={{ padding: '0.45rem 0.75rem', borderRadius: 8, textDecoration: 'none' }} to={`/reports/${runId}/workspace`}>
+          Open AI repair workspace →
+        </Link>
+      </p>
 
       <ReportFirstPanel report={report} runId={runId} onRetest={retestFinding} onReportRefresh={loadReport} />
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Quick exports</h3>
+        <p style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+          Saved under <code>data/runs/{runId}.json</code> and <code>data/exports/{runId}/</code>.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button type="button" className="primary" onClick={copyFixAllPrompt}>Fix-all prompt</button>
+          <button type="button" onClick={downloadQaAuditMd}>QA audit (.md)</button>
+          <button type="button" onClick={downloadFullJson}>Full JSON</button>
+          <a className="primary" style={{ padding: '0.5rem 0.75rem', borderRadius: 8, textDecoration: 'none' }} href={apiUrl(`${auditBase}/audit.html`)} target="_blank" rel="noreferrer">
+            Printable HTML
+          </a>
+          <button type="button" className="primary" onClick={retestFailed}>Retest failed checks</button>
+        </div>
+      </div>
+
+      <details className="card" style={{ padding: '0.75rem 1rem' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Extended report, QAV5 export &amp; technical sections</summary>
+        <div className="stack" style={{ marginTop: '1rem' }}>
 
       {failFindings.length > 0 && (
         <div className="card" style={{ borderColor: 'rgba(248, 113, 113, 0.45)' }}>
@@ -790,6 +815,9 @@ export default function ReportDetail() {
           />
         ))}
       </div>
+
+        </div>
+      </details>
     </div>
   );
 }

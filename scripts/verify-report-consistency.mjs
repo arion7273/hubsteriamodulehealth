@@ -8,6 +8,8 @@ import { normalizeRunReport } from '../engine/report-normalize.mjs';
 import { executeRun } from '../engine/run-executor.mjs';
 import { loadRegistry, saveRun, getRun } from '../server/storage.mjs';
 import { buildToolInventory } from '../engine/tool-inventory.mjs';
+import { ensureLocalServer } from './lib/ensure-local-server.mjs';
+import { identifyFromGit } from '../engine/build-identification.mjs';
 
 function mk(status, i, extra = {}) {
   return createFinding({
@@ -114,11 +116,16 @@ async function main() {
   const fromDisk = getRun('run_fixture_canonical_mixed');
   assert.ok(fromDisk.reportFirst?.actionSummary, 'report-first view');
   assert.ok(fromDisk.reportFirst.fixTheseFirst.cards.length >= 1, 'finding cards');
+  assert.ok(fromDisk.reportFirst.decision?.recommendation, 'decision block');
+  assert.ok(fromDisk.reportFirst.repairPlan?.steps?.length >= 1, 'repair plan');
   verifyReport(fromDisk);
+
+  const gitSelf = identifyFromGit(process.cwd());
+  assert.ok(gitSelf?.buildId, 'module health repo git build id for self-identification');
 
   const registry = loadRegistry();
   const app = registry.apps.find((a) => a.id === 'defect-fixture');
-  const port = process.env.PORT || 4177;
+  const { port, child: serverChild } = await ensureLocalServer(Number(process.env.PORT) || 4177);
   const targetUrl = `http://127.0.0.1:${port}/fixtures/defect-app/index.html`;
 
   const live = await executeRun(
@@ -158,7 +165,11 @@ async function main() {
 
   saveRun(live);
 
+  assert.ok(live.meta?.buildIdentification || live.buildId, 'live run captured build identification when available');
+
   const inventory = await buildToolInventory(live, { preflight: false });
+  if (serverChild) serverChild.kill('SIGTERM');
+
   console.log(JSON.stringify({ ok: true, fixture: fromDisk.summary, live: { runId: live.runId, summary: live.summary, toolInventory: inventory } }, null, 2));
 }
 

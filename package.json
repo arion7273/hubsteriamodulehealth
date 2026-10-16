@@ -20,19 +20,19 @@
     "verify:zap": "node scripts/verify-zap.mjs",
     "verify:reports": "node scripts/verify-report-consistency.mjs",
     "verify:comparison": "node scripts/verify-report-comparison.mjs",
+    "verify:workflows": "node scripts/verify-workflow-executor.mjs",
+    "verify:workflows-regression": "node scripts/verify-workflow-regression.mjs",
+    "verify:workspace": "node scripts/verify-workspace.mjs",
+    "verify:repair-e2e": "node scripts/verify-repair-e2e.mjs",
     "test:ai": "node scripts/test-ai-gateway.mjs",
     "migrate:export": "node scripts/migrate-cloud-export.mjs",
     "migrate:import": "node scripts/migrate-cloud-import.mjs",
-    "test": "node scripts/run-module-health.mjs --out reports/ci-before; node scripts/run-module-health.mjs --fix-all --out reports/ci; npm run verify:platform; npm run verify:adapters; npm run verify:reports",
+    "test": "node scripts/run-test-suite.mjs",
     "test:code-health": "node --test tests/code-health/*.test.mjs",
     "health:audit": "node scripts/code-health-cli.mjs audit",
     "health:compare": "node scripts/code-health-cli.mjs compare",
     "health:plan": "node scripts/code-health-cli.mjs plan",
     "health:baseline": "node scripts/code-health-cli.mjs baseline"
-  },
-  "devDependencies": {
-    "jscpd": "5.4.1",
-    "knip": "6.41.0"
   },
   "engines": {
     "node": ">=20"
@@ -46,5 +46,9 @@
     "pixelmatch": "^6.0.0",
     "playwright": "^1.49.1",
     "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "jscpd": "5.4.1",
+    "knip": "6.41.0"
   }
 }

@@ -42,6 +42,7 @@ export function classifyFindingOutcome(f) {
     (f.title && /runner crashed|not available/i.test(f.title));
 
   if (f.status === 'fail' && isRunner) return 'runner_failure';
+  if (f.status === 'fail' && checkId.startsWith('axe.')) return 'app_defect';
   if (f.status === 'fail' && checkId.startsWith('l1.')) {
     return f.severity === 'medium' || f.severity === 'low' ? 'review' : 'app_defect';
   }

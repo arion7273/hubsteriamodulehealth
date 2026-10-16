@@ -6,6 +6,7 @@ import AppDetail from './pages/AppDetail.jsx';
 import RunTest from './pages/RunTest.jsx';
 import Reports from './pages/Reports.jsx';
 import ReportDetail from './pages/ReportDetail.jsx';
+import ReportWorkspace from './pages/ReportWorkspace.jsx';
 import Schedules from './pages/Schedules.jsx';
 import Settings from './pages/Settings.jsx';
 
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/run" element={<RunTest />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/reports/:runId" element={<ReportDetail />} />
+        <Route path="/reports/:runId/workspace" element={<ReportWorkspace />} />
         <Route path="/schedules" element={<Schedules />} />
         <Route path="/settings" element={<Settings />} />
       </Route>

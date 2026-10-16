@@ -4,6 +4,7 @@ import { openBrowserSession, createInstrumentedPage, setHtmlContent } from '../b
 import { waitForAppReadiness } from '../readiness.mjs';
 import { captureScreenshot, captureSanitizedDom } from '../evidence.mjs';
 import { applyPrerequisites } from '../prerequisites.mjs';
+import { identifyBuild } from '../build-identification.mjs';
 
 function blockedDependent(findings, reason) {
   return applyPrerequisites(findings, 'l1.readiness.application', 'l1.links.');
@@ -95,6 +96,15 @@ export async function runLevel1QuickHealth(ctx) {
           }),
         );
         return findings;
+      }
+
+      if (ctx.runMeta) {
+        ctx.runMeta.buildIdentification = await identifyBuild({
+          page,
+          response,
+          repoRoot: ctx.repoRoot,
+          explicitBuildId: ctx.buildId ?? null,
+        });
       }
 
       findings.push(

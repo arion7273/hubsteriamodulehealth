@@ -1,0 +1,227 @@
+.ws-page {
+  --ws-bg: #f7f5f2;
+  --ws-surface: #ffffff;
+  --ws-ink: #0f2744;
+  --ws-teal: #0d6e6e;
+  --ws-border: #e2ddd6;
+  --ws-muted: #5c6570;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+  color: var(--ws-ink);
+  background: var(--ws-bg);
+  min-height: 100vh;
+}
+
+.ws-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ws-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ws-muted);
+  margin: 0;
+}
+
+.ws-title {
+  font-size: 1.5rem;
+  margin: 0.25rem 0;
+  font-weight: 650;
+}
+
+.ws-sub {
+  font-size: 0.85rem;
+  color: var(--ws-muted);
+  margin: 0;
+}
+
+.ws-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.ws-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.ws-tab {
+  border: 1px solid var(--ws-border);
+  background: var(--ws-surface);
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ws-tab-active {
+  border-color: var(--ws-teal);
+  box-shadow: 0 0 0 1px var(--ws-teal);
+}
+
+.ws-panel {
+  background: var(--ws-surface);
+  border: 1px solid var(--ws-border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 2px rgba(15, 39, 68, 0.04);
+}
+
+.ws-panel h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+
+.ws-lead {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.ws-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.ws-metric {
+  border: 1px solid var(--ws-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.ws-metric strong {
+  display: block;
+  font-size: 1.25rem;
+  margin-top: 0.15rem;
+}
+
+.ws-btn {
+  border: 1px solid var(--ws-border);
+  background: var(--ws-surface);
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ws-btn-primary {
+  background: var(--ws-teal);
+  color: #fff;
+  border-color: var(--ws-teal);
+}
+
+.ws-btn-ghost {
+  text-decoration: none;
+  color: inherit;
+}
+
+.ws-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-ai-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.ws-pill {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: #e8ecef;
+}
+
+.ws-pill-complete { background: #d1fae5; }
+.ws-pill-failed { background: #fee2e2; }
+.ws-pill-analyzing, .ws-pill-queued { background: #fef3c7; }
+
+.ws-muted { color: var(--ws-muted); font-size: 0.9rem; }
+.ws-error { color: #b91c1c; font-size: 0.9rem; }
+.ws-disclaimer { font-style: italic; }
+
+.ws-banner-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.ws-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.ws-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--ws-border);
+  border-radius: 8px;
+}
+
+.ws-issue-card {
+  border-top: 1px solid var(--ws-border);
+  padding: 0.85rem 0;
+  font-size: 0.9rem;
+}
+
+.ws-issue-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.ws-sev {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: #eee;
+}
+
+.ws-sev-high, .ws-sev-blocker { background: #fecaca; }
+.ws-measured {
+  font-size: 0.75rem;
+  color: var(--ws-muted);
+}
+
+.ws-list {
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.ws-pre {
+  font-size: 0.75rem;
+  overflow: auto;
+  max-height: 320px;
+  background: #f1f5f9;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .ws-title { font-size: 1.25rem; }
+}
