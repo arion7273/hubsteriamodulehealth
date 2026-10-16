@@ -8,13 +8,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { executeRun } from '../engine/run-executor.mjs';
 import { loadRegistry } from '../server/storage.mjs';
+import { sleep, startScannerServerIfNeeded } from './lib/verify-server.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
 
 async function waitZap(apiUrl) {
   for (let i = 0; i < 60; i++) {
@@ -29,32 +26,13 @@ async function waitZap(apiUrl) {
   throw new Error('ZAP did not become ready');
 }
 
-async function waitForServer(url, attempts = 40) {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return;
-    } catch {
-      /* retry */
-    }
-    await sleep(250);
-  }
-  throw new Error('Server did not start');
-}
-
 async function main() {
   if (process.env.VERIFY_ZAP !== '1') {
     console.log('Skipping ZAP verify (set VERIFY_ZAP=1)');
     return;
   }
 
-  let server = null;
-  try {
-    await waitForServer('http://127.0.0.1:4177/api/health', 3);
-  } catch {
-    server = spawn('node', ['server/index.mjs'], { cwd: ROOT, stdio: 'inherit' });
-    await waitForServer('http://127.0.0.1:4177/api/health');
-  }
+  const scannerServer = await startScannerServerIfNeeded(ROOT);
 
   const apiUrl = 'http://127.0.0.1:8090';
   const docker = spawn(
@@ -83,7 +61,7 @@ async function main() {
   );
 
   docker.kill('SIGTERM');
-  if (server) server.kill('SIGTERM');
+  scannerServer.stop();
 
   const zapTool = report.tools?.find((t) => t.tool === 'zap');
   if (!zapTool || zapTool.status !== 'completed') {

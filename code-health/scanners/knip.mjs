@@ -35,6 +35,10 @@ export async function runKnipScanner(config) {
           web: {
             entry: ['src/main.jsx'],
             project: ['src/**/*.{js,jsx}'],
+            paths: {
+              '@engine/*': ['../engine/*'],
+              '@registry/*': ['../registry/*'],
+            },
           },
         },
       },

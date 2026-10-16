@@ -1,34 +1,17 @@
 #!/usr/bin/env node
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { executeRun } from '../engine/run-executor.mjs';
 import { loadRegistry } from '../server/storage.mjs';
 import { commandExists } from '../engine/adapters/exec.mjs';
+import { sleep, startScannerServerIfNeeded } from './lib/verify-server.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const SAMPLE_REPO = path.join(ROOT, 'fixtures/sample-repo');
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-async function waitForServer(url, attempts = 40) {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return;
-    } catch {
-      /* retry */
-    }
-    await sleep(250);
-  }
-  throw new Error('Server did not start');
-}
-
 async function installSampleRepo() {
-  const { spawnSync } = await import('node:child_process');
   const r = spawnSync('npm', ['install', '--ignore-scripts'], { cwd: SAMPLE_REPO, stdio: 'inherit' });
   if (r.status !== 0) throw new Error('sample-repo npm install failed');
 }
@@ -36,18 +19,9 @@ async function installSampleRepo() {
 async function main() {
   await installSampleRepo();
 
-  let server = null;
-  let startedServer = false;
-  try {
-    await waitForServer('http://127.0.0.1:4177/api/health', 3);
-  } catch {
-    server = spawn('node', ['server/index.mjs'], { cwd: ROOT, stdio: 'inherit' });
-    startedServer = true;
-    await waitForServer('http://127.0.0.1:4177/api/health');
-  }
+  const scannerServer = await startScannerServerIfNeeded(ROOT);
 
   const baselineScript = path.join(__dirname, 'generate-visual-baseline.mjs');
-  const { spawnSync } = await import('node:child_process');
   spawnSync('node', [baselineScript], { cwd: ROOT, stdio: 'inherit' });
 
   const registry = loadRegistry();
@@ -241,7 +215,7 @@ async function main() {
     failures.push(`worker queue: expected completed job, got ${job.status} ${job.message ?? ''}`);
   }
 
-  if (startedServer && server) server.kill('SIGTERM');
+  scannerServer.stop();
 
   if (failures.length) {
     console.error('Adapter verification failed:\n', failures.join('\n'));

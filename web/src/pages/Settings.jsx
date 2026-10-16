@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import AppSelect from '../components/AppSelect.jsx';
 
 export default function Settings() {
   const [apps, setApps] = useState([]);
@@ -47,12 +48,7 @@ export default function Settings() {
     <div className="stack">
       <h2>Module tester settings</h2>
       <div className="card stack">
-        <label>App</label>
-        <select value={appId} onChange={(e) => setAppId(e.target.value)}>
-          {apps.map((a) => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
-        </select>
+        <AppSelect apps={apps} value={appId} onChange={setAppId} label="App" />
         <label>Page limit</label>
         <input
           type="number"
