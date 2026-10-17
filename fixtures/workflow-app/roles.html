@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Workflow fixture — roles</title>
+</head>
+<body>
+  <h1>Role gate</h1>
+  <button type="button" id="staff">Act as staff</button>
+  <button type="button" id="admin">Act as admin</button>
+  <p>Current role: <strong id="role">guest</strong></p>
+  <button type="button" id="admin-action">Admin: export records</button>
+  <p id="ui-result" role="status"></p>
+  <script>
+    function role() { return sessionStorage.getItem('wf-role') || 'guest'; }
+    function render() { document.getElementById('role').textContent = role(); }
+    document.getElementById('staff').onclick = () => { sessionStorage.setItem('wf-role', 'staff'); render(); };
+    document.getElementById('admin').onclick = () => { sessionStorage.setItem('wf-role', 'admin'); render(); };
+    document.getElementById('admin-action').onclick = async () => {
+      const r = document.getElementById('ui-result');
+      if (role() !== 'admin') {
+        r.textContent = 'Access denied in UI';
+        return;
+      }
+      r.textContent = 'UI allowed — checking server…';
+      const res = await fetch('/api/workflow-fixture/records', {
+        headers: { 'X-WF-Role': role() },
+      });
+      if (res.status === 403) r.textContent = 'Server denied (403)';
+      else if (res.ok) r.textContent = 'Server allowed';
+      else r.textContent = 'Server error ' + res.status;
+    };
+    render();
+  </script>
+</body>
+</html>

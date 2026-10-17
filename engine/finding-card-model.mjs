@@ -1,5 +1,6 @@
 import { getFixPlaybook } from './fix-playbooks.mjs';
 import { categoryForCheckId, categoryLabel } from './qa-audit-categories.mjs';
+import { classifyFindingOutcome } from './finding-classify.mjs';
 
 const NA = 'Not available for this report';
 
@@ -10,12 +11,10 @@ const NA = 'Not available for this report';
 export function buildFindingCard(f, report) {
   const pb = getFixPlaybook(f);
   const cat = categoryForCheckId(f.checkId ?? '');
-  const diagnosisConfidence =
-    f.verifiedObservation && !f.scannerFinding
-      ? 'confirmed_observation'
-      : f.suspectedCause
-        ? 'suspected'
-        : 'unknown';
+  const requiresSourceInspection =
+    (report.inputMode === 'url' || report.inputMode === 'html') && !report.meta?.repoRoot;
+  const outcomeKind = classifyFindingOutcome(f);
+  const cause = resolveCause(f, { requiresSourceInspection, outcomeKind });
 
   return {
     findingId: f.id,
@@ -37,11 +36,14 @@ export function buildFindingCard(f, report) {
     reproduction: f.reproduction?.length ? f.reproduction : defaultReproduction(report, f),
     expected: f.expected ?? NA,
     actual: f.actual ?? f.detail ?? NA,
+    plainLanguageFailure: plainFailureSummary(f),
     evidence: f.evidence ?? [],
-    cause: {
-      confirmed: diagnosisConfidence === 'confirmed_observation' ? f.suspectedCause : null,
-      suspected: diagnosisConfidence === 'suspected' ? f.suspectedCause : null,
-      label: diagnosisConfidence === 'confirmed_observation' ? 'Confirmed cause' : 'Suspected cause',
+    outcomeKind,
+    requiresSourceInspection,
+    cause,
+    verifyRepair: {
+      checks: [f.checkId].filter(Boolean),
+      note: 'Re-run Module Health on the same URL and packs after deploy; compare runs for verified fixed.',
     },
     recommendedFix: f.remediation?.summary ?? pb.steps[0] ?? NA,
     fixSteps: pb.steps,
@@ -87,4 +89,40 @@ function toolFromCheckId(checkId = '') {
   if (checkId.startsWith('eslint.')) return 'ESLint';
   if (checkId.startsWith('l1.')) return 'Playwright';
   return NA;
+}
+
+function plainFailureSummary(f) {
+  if (f.title && f.actual) return `${f.title}: ${f.actual}`;
+  return f.title ?? f.actual ?? NA;
+}
+
+function resolveCause(f, { requiresSourceInspection, outcomeKind }) {
+  if (outcomeKind === 'runner_failure') {
+    const actual = String(f.actual ?? '');
+    const playwrightMissing = /Executable doesn't exist|playwright install/i.test(actual);
+    return {
+      tier: 'confirmed',
+      label: 'Confirmed cause',
+      text: playwrightMissing
+        ? 'Module Health scan runner is missing Playwright Chromium (environment setup). This is not a defect on the URL under test.'
+        : 'Scanner or runner did not complete successfully for this check.',
+      requiresSourceInspection: false,
+    };
+  }
+  if (f.suspectedCause) {
+    return {
+      tier: 'suspected',
+      label: 'Suspected cause',
+      text: f.suspectedCause,
+      requiresSourceInspection,
+    };
+  }
+  return {
+    tier: 'unknown',
+    label: 'Cause unknown',
+    text: requiresSourceInspection
+      ? 'URL-only scan — inspect source in the application repository to confirm root cause.'
+      : 'Not determined from recorded evidence.',
+    requiresSourceInspection,
+  };
 }

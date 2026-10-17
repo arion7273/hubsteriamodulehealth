@@ -1,7 +1,7 @@
 import { structureReport } from './report-structure.mjs';
 import { deriveExecution, formatHeadline } from './report-execution.mjs';
 import { buildToolInventory } from './tool-inventory.mjs';
-import { buildRunCoverage } from './run-coverage.mjs';
+import { buildRunCoverage, resolvePacksExecuted } from './run-coverage.mjs';
 import { buildExecutiveSummary } from './report-executive-summary.mjs';
 import { ensureFindingRemediation } from './finding-remediation.mjs';
 import { attachQaAuditRender } from './qa-audit-document.mjs';
@@ -87,9 +87,14 @@ export function normalizeRunReport(raw) {
       runScope: meta.runScope ?? {
         levels: raw.levels ?? [1],
         inputMode: raw.inputMode ?? 'url',
-        packsExecuted: raw.packsExecuted ?? [],
+        packsExecuted: resolvePacksExecuted({
+          levels: raw.levels,
+          packs: raw.packs,
+          packsExecuted: raw.packsExecuted,
+        }),
         environment: raw.environment,
       },
+      buildIdentification: meta.buildIdentification ?? null,
     },
     toolInventory: raw.toolInventory ?? null,
     coverage: buildRunCoverage(
@@ -103,7 +108,11 @@ export function normalizeRunReport(raw) {
       {
         inputMode: raw.inputMode ?? 'url',
         levels: raw.levels ?? [1],
-        packs: raw.packsExecuted?.length ? raw.packsExecuted : undefined,
+        packs: resolvePacksExecuted({
+          levels: raw.levels,
+          packs: raw.packs,
+          packsExecuted: raw.packsExecuted,
+        }),
       },
       raw.toolInventory ?? [],
     ),

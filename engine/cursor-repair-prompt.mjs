@@ -2,6 +2,9 @@ import { buildFindingCard } from './finding-card-model.mjs';
 import { buildCursorFixPrompt } from './findings.mjs';
 import { buildCapabilityModes } from './capability-modes.mjs';
 import { getFixPlaybook } from './fix-playbooks.mjs';
+import { classifyFindingOutcome } from './finding-classify.mjs';
+
+export const REPAIR_PROMPT_MAX_ISSUES = 10;
 
 /**
  * Deterministic repair prompt (no AI required).
@@ -13,13 +16,20 @@ import { getFixPlaybook } from './fix-playbooks.mjs';
 export function buildCursorRepairPrompt(report, opts = {}) {
   const openFails = (report.findings ?? []).filter((f) => f.status === 'fail');
   const idSet = opts.findingIds?.length ? new Set(opts.findingIds) : null;
-  const selected = idSet ? openFails.filter((f) => idSet.has(f.id)) : openFails;
+  let selected = idSet ? openFails.filter((f) => idSet.has(f.id)) : openFails;
+  const maxIssues = opts.maxIssues ?? (idSet ? selected.length : REPAIR_PROMPT_MAX_ISSUES);
+  let batchNote = null;
+  if (!idSet && selected.length > maxIssues) {
+    batchNote = `Batch limited to ${maxIssues} of ${openFails.length} open issues. Use **selected issues** prompts for additional batches — do not rewrite the whole application in one pass.`;
+    selected = selected.slice(0, maxIssues);
+  }
 
   if (!selected.length) {
     return `# Module Health repair prompt\n\nNo open failures selected (run ${report.runId}).\n`;
   }
 
   const modes = buildCapabilityModes(report).filter((m) => m.active).map((m) => m.label);
+  const runnerOnly = selected.every((f) => classifyFindingOutcome(f) === 'runner_failure');
   const lines = [
     '# Cursor repair prompt — Module Health',
     '',
@@ -37,17 +47,33 @@ export function buildCursorRepairPrompt(report, opts = {}) {
     '',
     '## Instructions for the Cursor agent',
     '',
-    '1. Read repository instructions (README, AGENTS.md) before editing.',
-    '2. Confirm each issue against the **current** codebase — do not assume paths from URL-only scans.',
-    '3. Fix **root causes** where confirmed; treat scanner output as **suspected** until verified in code.',
-    '4. Preserve unrelated behavior and the established design language.',
-    '5. After changes, run appropriate local checks and specify how to re-verify in Module Health.',
-    '6. Report changed files, verification evidence, and any unresolved blockers.',
-    '7. **Do not** claim completion because code changed — only because listed checks would pass on re-run.',
-    '',
-    '---',
-    '',
   ];
+  if (runnerOnly) {
+    lines.push(
+      '> **Scanner host issue — not the scanned website.** These failures mean Playwright/Chromium is missing or broken on the machine running Module Health (`npm start`). **Do not** change hubsteriacare.com (or other target app) source for these checks.',
+      '',
+      '1. Work in the **hubsteriamodulehealth** repo (scan runner).',
+      '2. Run `npx playwright install chromium` and restart the server.',
+      '3. Re-run the same URL scan; `playwright-live.crash` / `axe-core.crash` should disappear.',
+      '4. Only after the runner works, address any **axe.rule.*** findings in the target app repo.',
+      '',
+    );
+  } else {
+    lines.push(
+      '1. Read repository instructions (README, AGENTS.md) before editing.',
+      '2. Confirm each issue against the **current** codebase — do not assume paths from URL-only scans.',
+      '3. Fix **root causes** where confirmed; treat scanner output as **suspected** until verified in code.',
+      '4. Preserve unrelated behavior and the established design language.',
+      '5. After changes, run appropriate local checks and specify how to re-verify in Module Health.',
+      '6. Report changed files, verification evidence, and any unresolved blockers.',
+      '7. **Do not** claim completion because code changed — only because listed checks would pass on re-run.',
+      '',
+    );
+  }
+  if (batchNote) {
+    lines.push(`> ${batchNote}`, '');
+  }
+  lines.push('---', '');
 
   selected.forEach((f, idx) => {
     const card = buildFindingCard(f, report);
@@ -67,11 +93,12 @@ export function buildCursorRepairPrompt(report, opts = {}) {
     lines.push(`- **Expected:** ${card.expected}`);
     lines.push(`- **Actual:** ${card.actual}`);
     lines.push('');
-    if (card.cause.suspected || card.cause.confirmed) {
-      lines.push(`### ${card.cause.label}`);
-      lines.push(card.cause.confirmed ?? card.cause.suspected ?? '');
-      lines.push('');
+    lines.push(`### ${card.cause.label} (${card.cause.tier})`);
+    lines.push(card.cause.text);
+    if (card.requiresSourceInspection) {
+      lines.push('', '_Source inspection required — do not invent file paths from URL-only evidence._');
     }
+    lines.push('');
     lines.push('### Recommended fix');
     lines.push(card.recommendedFix);
     pb.steps.forEach((s) => lines.push(`- ${s}`));

@@ -20,16 +20,16 @@ export default function RunTest() {
   const [targetUrl, setTargetUrl] = useState('');
   const [repoRoot, setRepoRoot] = useState('');
   const [html, setHtml] = useState('');
-  const [levels, setLevels] = useState([1]);
+  const [levels, setLevels] = useState([1, 4]);
   const [usePacks, setUsePacks] = useState(true);
   const [packCatalog, setPackCatalog] = useState([]);
   const [packNote, setPackNote] = useState('');
-  const [selectedPacks, setSelectedPacks] = useState(['quick-health']);
+  const [selectedPacks, setSelectedPacks] = useState(['quick-health', 'ui-a11y']);
   const [job, setJob] = useState(null);
   const [polling, setPolling] = useState(false);
   const [runError, setRunError] = useState('');
   const [presets, setPresets] = useState([]);
-  const [presetId, setPresetId] = useState(params.get('preset') ?? '');
+  const [presetId, setPresetId] = useState(params.get('preset') ?? 'any-url-qa-audit');
 
   const selectedApp = useMemo(() => apps.find((a) => a.id === appId), [apps, appId]);
 
@@ -56,6 +56,7 @@ export default function RunTest() {
     const levelParam = params.get('levels');
     const presetParam = params.get('preset');
     if (presetParam && presets.length) applyPreset(presetParam);
+    else if (!packParam && !levelParam && presets.length && presetId) applyPreset(presetId);
     else {
       if (im === 'repository' || im === 'url' || im === 'html') setInputMode(im);
       if (packParam) {
@@ -90,7 +91,10 @@ export default function RunTest() {
         setSelectedPacks((prev) => {
           const allowed = new Set((data.packs ?? []).map((p) => p.id));
           const kept = prev.filter((id) => allowed.has(id));
-          return kept.length ? kept : [(data.packs ?? [])[0]?.id].filter(Boolean);
+          if (kept.length) return kept;
+          const urlDefaults = ['quick-health', 'ui-a11y'].filter((id) => allowed.has(id));
+          if (inputMode === 'url' && urlDefaults.length) return urlDefaults;
+          return [(data.packs ?? [])[0]?.id].filter(Boolean);
         });
       })
       .catch(() => setPackCatalog([]));

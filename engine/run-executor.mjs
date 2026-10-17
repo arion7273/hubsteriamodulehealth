@@ -10,7 +10,8 @@ import { structureReport } from './report-structure.mjs';
 import { deriveExecution, formatHeadline } from './report-execution.mjs';
 import { expandRetestCheckIds, mergeRetestFindings } from './retest-merge.mjs';
 import { attachToolInventory, normalizeRunReport } from './report-normalize.mjs';
-import { buildRunCoverage } from './run-coverage.mjs';
+import { buildRunCoverage, inferPacksFromLevels, inferLevelsFromPacks } from './run-coverage.mjs';
+import { identifyBuild } from './build-identification.mjs';
 import { assertUrlAllowed } from './security/url-guard.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -86,8 +87,9 @@ export async function executeRun(runRequest, registry, previousReport) {
     timeoutMs: runRequest.timeoutMs ?? moduleSettings.timeoutMs ?? app.budgets?.timeoutMs ?? global.defaultTimeoutMs,
   };
 
-  const levels = runRequest.levels ?? [1];
   const packs = runRequest.packs?.length ? runRequest.packs : null;
+  const levels =
+    runRequest.levels?.length ? runRequest.levels : packs?.length ? inferLevelsFromPacks(packs) : [1];
   const allFindings = [];
   const runStarted = Date.now();
   const runStartedAt = new Date(runStarted).toISOString();
@@ -127,10 +129,12 @@ export async function executeRun(runRequest, registry, previousReport) {
     budgets,
     moduleIds: runRequest.moduleIds,
     workflowIds: runRequest.workflowIds,
+    workflowVariant: runRequest.workflowVariant,
     runId: runRequest.runId,
     moduleSettings,
     retestOf: runRequest.retestOf,
     repoRoot: repoRoot ? (path.isAbsolute(repoRoot) ? repoRoot : path.resolve(repoRoot)) : null,
+    buildId: runRequest.buildId ?? app.buildId ?? null,
     runMeta,
   };
 
@@ -175,6 +179,12 @@ export async function executeRun(runRequest, registry, previousReport) {
   }
 
   const durationMs = Date.now() - runStarted;
+  const buildIdentification =
+    runMeta.buildIdentification ??
+    (await identifyBuild({
+      repoRoot: baseCtx.repoRoot,
+      explicitBuildId: runRequest.buildId ?? app.buildId ?? null,
+    }));
   const draft = buildReport(runRequest, app, merged, {
     budgets,
     envConfig,
@@ -188,15 +198,20 @@ export async function executeRun(runRequest, registry, previousReport) {
     retestOf: runRequest.retestOf ?? null,
     retestMode: runRequest.retestMode ?? null,
     toolRuns,
-    packsExecuted: packs ?? levels.map((l) => `level-${l}`),
+    packsExecuted: packs ?? inferPacksFromLevels(levels),
+    buildIdentification,
     packDefinitions: PACK_DEFINITIONS,
     artifactDir: `data/artifacts/${runRequest.runId}`,
+    workflowVariant: runRequest.workflowVariant ?? null,
+    workflowIds: runRequest.workflowIds ?? null,
     runScope: {
       levels,
       inputMode,
       packs: packs ?? [],
       environment: runRequest.environment,
       checkFilter: runRequest.checkFilter ?? null,
+      workflowVariant: runRequest.workflowVariant ?? null,
+      workflowIds: runRequest.workflowIds ?? null,
     },
   });
 
@@ -241,7 +256,7 @@ function buildReport(runRequest, app, findings, meta = {}) {
     appId: app.id,
     appName: app.name,
     environment: runRequest.environment,
-    buildId: runRequest.buildId ?? app.buildId ?? null,
+    buildId: runRequest.buildId ?? app.buildId ?? meta.buildIdentification?.buildId ?? null,
     inputMode: runRequest.inputMode ?? 'url',
     levels: runRequest.levels ?? [1],
     generatedAt: new Date().toISOString(),
@@ -290,7 +305,10 @@ function buildReport(runRequest, app, findings, meta = {}) {
       retestMode: meta.retestMode ?? null,
       artifactDir: meta.artifactDir ?? null,
       runScope: meta.runScope ?? null,
+      workflowVariant: meta.workflowVariant ?? runRequest.workflowVariant ?? null,
+      workflowIds: meta.workflowIds ?? runRequest.workflowIds ?? null,
       incomplete: meta.incomplete ?? false,
+      buildIdentification: meta.buildIdentification ?? null,
     },
     comparisonNote:
       'Blocked, skipped, and not_tested checks are not counted as passes. Compare only equivalent environment and level sets.',

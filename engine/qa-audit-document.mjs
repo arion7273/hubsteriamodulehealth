@@ -1,4 +1,5 @@
 import { buildExecutiveSummary } from './report-executive-summary.mjs';
+import { buildReportDecision } from './report-decision.mjs';
 import { AUDIT_CATEGORIES, categoryForCheckId, categoryLabel } from './qa-audit-categories.mjs';
 import { presetToRunTestQuery, RUN_PRESETS } from './run-presets.mjs';
 import { getFixPlaybook } from './fix-playbooks.mjs';
@@ -123,6 +124,16 @@ function countBySeverity(fails) {
 
 function buildHealthNarrative(report, siteName, severityCounts, statusCounts, coverage) {
   const lines = [];
+  const decision = buildReportDecision(report);
+  lines.push(
+    `**Recommendation:** ${decision.recommendationLabel} — ${decision.explanation}`,
+  );
+  if (decision.runContext.buildLabel) {
+    lines.push(`**Build:** ${decision.runContext.buildLabel}`);
+  }
+  lines.push(
+    `**Target:** ${decision.runContext.targetUrl ?? '—'} · **Mode:** ${decision.runContext.inputModeLabel}`,
+  );
   const failN = statusCounts.fail ?? 0;
   const passN = statusCounts.pass ?? 0;
   const blockedN = statusCounts.blocked ?? 0;

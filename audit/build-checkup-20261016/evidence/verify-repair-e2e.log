@@ -1,0 +1,29 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:repair-e2e
+> node scripts/verify-repair-e2e.mjs
+
+1) Baseline run (broken-persist)…
+   finding: l3.workflow.gap-create-persist.summary fail actual: One or more steps failed — see step findings
+   step: l3.workflow.gap-create-persist.step.5 Persisted wf-record-name expected "WF-run_repair_e2e_1792154289577", got ""
+2) Workspace + AI analysis…
+   AI disabled — status: queued
+3) Repair plan + patch…
+   patch files: fixtures/workflow-app/create.html
+4) Apply + verify…
+AssertionError [ERR_ASSERTION]: verify status verification_failed
++ actual - expected
+
++ 'verification_failed'
+- 'verified_fixed'
+         ^
+
+    at main (file:///Users/josephfelipe/Documents/GitHub/hubsteriamodulehealth/scripts/verify-repair-e2e.mjs:107:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'verification_failed',
+  expected: 'verified_fixed',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

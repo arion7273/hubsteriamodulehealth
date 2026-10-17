@@ -1,0 +1,27 @@
+{
+  "id": "gap-validation",
+  "version": 1,
+  "label": "Required name validation blocks empty save",
+  "setup": [{ "type": "clearStorage", "storage": "local" }],
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "{baseUrl}/create.html?variant={variant}",
+      "title": "Open create form"
+    },
+    { "type": "click", "selector": "#save-btn", "title": "Save without name" },
+    {
+      "type": "assertVisible",
+      "selector": "#status",
+      "textContains": "required",
+      "title": "Validation message shown"
+    },
+    {
+      "type": "assertPersisted",
+      "storage": "local",
+      "key": "wf-record-name",
+      "equals": "",
+      "title": "No persistence on invalid save"
+    }
+  ]
+}

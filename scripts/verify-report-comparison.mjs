@@ -94,4 +94,28 @@ assert.match(prompt, /f1/);
 assert.match(prompt, /axe\.rule\.color-contrast/);
 assert.match(prompt, /Do not.*claim completion/i);
 
+// Incomparable URL — no verified fixed, only possibly fixed
+const runUrlA = baseRun([fail('axe.rule.region', 'fa')], 'run_url_a', { targetUrl: 'https://a.example' });
+const runUrlB = baseRun([pass('axe.rule.region', 'fb')], 'run_url_b', { targetUrl: 'https://b.example' });
+const dUrl = compareRunsDetailed(runUrlA, runUrlB);
+assert.equal(dUrl.verifiedFixed.length, 0, 'no verified fixed across different URLs');
+assert.equal(dUrl.possiblyFixed.length, 1, 'possibly fixed when incomparable');
+
+// Batch limit on all-open prompt
+const manyFails = Array.from({ length: 15 }, (_, i) =>
+  fail(`axe.rule.test-${i}`, `fid_${i}`),
+);
+const runMany = baseRun(manyFails, 'run_many');
+const allPrompt = buildCursorRepairPrompt(runMany, {});
+assert.match(allPrompt, /Batch limited to 10/);
+
+// Partial comparability (pack mismatch only) still allows approximate verified fixed
+const runPackA = baseRun([fail('axe.rule.region', 'p1')], 'run_pack_a', { targetUrl: 'https://example.com' });
+runPackA.packsExecuted = ['quick-health'];
+const runPackB = baseRun([pass('axe.rule.region', 'p2')], 'run_pack_b', { targetUrl: 'https://example.com' });
+runPackB.packsExecuted = ['quick-health', 'ui-a11y'];
+const dPack = compareRunsDetailed(runPackA, runPackB);
+assert.equal(dPack.verifiedFixed.length, 1, 'approximate verified fixed when packs differ only');
+assert.equal(dPack.verifiedFixed[0].verificationLevel, 'approximate');
+
 console.log('verify-report-comparison: ok');

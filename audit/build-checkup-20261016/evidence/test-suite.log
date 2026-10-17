@@ -1,0 +1,373 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 test
+> node scripts/run-test-suite.mjs
+
+Module Health gate: ship
+Reports written to /Users/josephfelipe/Documents/GitHub/hubsteriamodulehealth/reports/ci-before
+[test-suite] ok: node scripts/run-module-health.mjs --out reports/ci-before
+Module Health gate: ship
+Reports written to /Users/josephfelipe/Documents/GitHub/hubsteriamodulehealth/reports/ci
+[test-suite] ok: node scripts/run-module-health.mjs --fix-all --out reports/ci
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:platform
+> node scripts/verify-platform.mjs
+
+Platform verification passed (defect fixture detection).
+[test-suite] ok: npm run verify:platform
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:adapters
+> node scripts/verify-adapters.mjs
+
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+up to date, audited 129 packages in 802ms
+
+35 packages are looking for funding
+  run `npm fund` for details
+
+6 vulnerabilities (3 moderate, 1 high, 2 critical)
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+Wrote /Users/josephfelipe/Documents/GitHub/hubsteriamodulehealth/fixtures/defect-app/baselines/visual-regression.png
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+up to date, audited 269 packages in 3s
+
+32 packages are looking for funding
+  run `npm fund` for details
+
+33 vulnerabilities (5 moderate, 28 high)
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+Adapter verification passed.
+[test-suite] ok: npm run verify:adapters
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:reports
+> node scripts/verify-report-consistency.mjs
+
+{
+  "ok": true,
+  "fixture": {
+    "counts": {
+      "pass": 9,
+      "fail": 4,
+      "blocked": 1,
+      "skip": 0,
+      "not_tested": 3,
+      "not_applicable": 0,
+      "not_started": 0
+    },
+    "execution": {
+      "planned": 17,
+      "completed": 13,
+      "blocked": 1,
+      "notExecuted": 3,
+      "notApplicable": 0
+    },
+    "modulesConfigured": 0,
+    "modulesCovered": 0,
+    "moduleCoverageNote": "Module coverage not configured for this app."
+  },
+  "live": {
+    "runId": "run_verify_1792154278963",
+    "summary": {
+      "counts": {
+        "pass": 8,
+        "fail": 1,
+        "blocked": 0,
+        "skip": 0,
+        "not_tested": 0,
+        "not_applicable": 0,
+        "not_started": 0
+      },
+      "execution": {
+        "planned": 9,
+        "completed": 9,
+        "blocked": 0,
+        "notExecuted": 0,
+        "notApplicable": 0
+      },
+      "modulesConfigured": 3,
+      "modulesCovered": 0,
+      "moduleCoverageNote": "0 of 3 module(s) referenced in findings."
+    },
+    "toolInventory": [
+      {
+        "tool": "Playwright",
+        "adapterId": "playwright",
+        "implemented": true,
+        "version": "1.49+",
+        "available": null,
+        "availableReason": null,
+        "configured": true,
+        "configuredReason": null,
+        "executed": true,
+        "executedReason": null,
+        "scope": "Quick Health",
+        "findingsCount": 9,
+        "checkOutcomes": {
+          "pass": 8,
+          "fail": 1,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": "data/artifacts/run_verify_1792154278963",
+        "runStatus": null
+      },
+      {
+        "tool": "axe-core",
+        "adapterId": "axe-core",
+        "implemented": true,
+        "version": "4.10+",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "Not in selected levels/packs for this run.",
+        "executed": false,
+        "executedReason": "Not in selected levels/packs for this run.",
+        "scope": "UI & Accessibility",
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "Lighthouse",
+        "adapterId": "lighthouse",
+        "implemented": true,
+        "version": "12.x",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "Not in selected levels/packs for this run.",
+        "executed": false,
+        "executedReason": "Not in selected levels/packs for this run.",
+        "scope": "UI & Accessibility",
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "ESLint",
+        "adapterId": "eslint",
+        "implemented": true,
+        "version": "9.x",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "URL-only scan does not run repository tools.",
+        "executed": false,
+        "executedReason": "Skipped: repository input required.",
+        "scope": null,
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "TypeScript",
+        "adapterId": "typescript",
+        "implemented": true,
+        "version": "5.x",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "URL-only scan does not run repository tools.",
+        "executed": false,
+        "executedReason": "Skipped: repository input required.",
+        "scope": null,
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "Unit/component tests (Vitest)",
+        "adapterId": "vitest",
+        "implemented": true,
+        "version": "2.x",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "URL-only scan does not run repository tools.",
+        "executed": false,
+        "executedReason": "Skipped: repository input required.",
+        "scope": null,
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "Semgrep",
+        "adapterId": "semgrep",
+        "implemented": true,
+        "version": "1.x",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "URL-only scan does not run repository tools.",
+        "executed": false,
+        "executedReason": "Skipped: repository input required.",
+        "scope": "Security",
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "Gitleaks",
+        "adapterId": "gitleaks",
+        "implemented": true,
+        "version": "8.x",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "URL-only scan does not run repository tools.",
+        "executed": false,
+        "executedReason": "Skipped: repository input required.",
+        "scope": "Security",
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "Dependency audit (npm)",
+        "adapterId": "npm-audit",
+        "implemented": true,
+        "version": "10.x",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "URL-only scan does not run repository tools.",
+        "executed": false,
+        "executedReason": "Skipped: repository input required.",
+        "scope": null,
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "OWASP ZAP",
+        "adapterId": "zap",
+        "implemented": true,
+        "version": "2.15+",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "Not in selected levels/packs for this run.",
+        "executed": false,
+        "executedReason": "Not in selected levels/packs for this run.",
+        "scope": "Security",
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      },
+      {
+        "tool": "k6",
+        "adapterId": "k6",
+        "implemented": true,
+        "version": "0.52+",
+        "available": null,
+        "availableReason": null,
+        "configured": false,
+        "configuredReason": "Not in selected levels/packs for this run.",
+        "executed": false,
+        "executedReason": "Not in selected levels/packs for this run.",
+        "scope": "Load & Recovery",
+        "findingsCount": 0,
+        "checkOutcomes": {
+          "pass": 0,
+          "fail": 0,
+          "blocked": 0,
+          "not_executed": 0
+        },
+        "evidencePath": null,
+        "runStatus": null
+      }
+    ]
+  }
+}
+[test-suite] ok: npm run verify:reports
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:comparison
+> node scripts/verify-report-comparison.mjs
+
+verify-report-comparison: ok
+[test-suite] ok: npm run verify:comparison
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:workflows
+> node scripts/verify-workflow-executor.mjs
+
+verify-workflow-executor: ok
+[test-suite] ok: npm run verify:workflows
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> hubsteriamodulehealth@0.1.0 verify:workspace
+> node scripts/verify-workspace.mjs
+
+verify-workspace: ok
+[test-suite] ok: npm run verify:workspace
+
+[test-suite] all steps passed

@@ -207,13 +207,24 @@ export function mergeAiIntoReportFirst(reportFirst, cached, config) {
       aiAnalysis: {
         status: 'pending',
         label: 'AI analysis not run yet',
-        message: 'Run AI analysis to get repair order and impact summaries. Raw tool results are unchanged.',
+        message:
+          'Run AI analysis for suggested repair order and impact summaries. AI cannot change pass/fail counts or claim verified fixes — measured results stay as recorded.',
         analysisVersion: config.analysisVersion,
         model: config.model,
         provider: 'vercel-ai-gateway',
         referencedFindingIds: [],
+        grounded: true,
       },
     };
   }
-  return { ...reportFirst, aiAnalysis: cached };
+  return {
+    ...reportFirst,
+    aiAnalysis: {
+      ...cached,
+      grounded: true,
+      disclaimer:
+        cached.disclaimer ??
+        'AI suggestions are hypotheses only. Pass/fail and comparison results are deterministic unless you re-run scans.',
+    },
+  };
 }

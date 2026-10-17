@@ -2,6 +2,12 @@ import { buildExecutiveSummary } from './report-executive-summary.mjs';
 import { buildFindingCard } from './finding-card-model.mjs';
 import { categoryForCheckId, categoryLabel, AUDIT_CATEGORIES } from './qa-audit-categories.mjs';
 import { buildCapabilityModes } from './capability-modes.mjs';
+import { buildReportDecision } from './report-decision.mjs';
+import { buildRepairPlan } from './repair-plan.mjs';
+import { buildFailureGroups } from './finding-groups.mjs';
+import { buildCoverageGapsDetail } from './coverage-gaps-detail.mjs';
+import { getAiGatewayConfig } from './ai-config.mjs';
+import { mergeAiIntoReportFirst } from './ai-report-analysis.mjs';
 /**
  * Report-first view model (sections A–F).
  * @param {object} report - normalized, with comparison when available
@@ -12,19 +18,34 @@ export function buildReportFirstView(report) {
   const execution = report.summary?.execution ?? {};
   const fails = (report.findings ?? []).filter((f) => f.status === 'fail');
   const blocked = (report.findings ?? []).filter((f) => f.status === 'blocked');
-  const cards = fails.map((f) => buildFindingCard(f, report));
+  const applicationCards = [];
+  const executionCards = [];
+  for (const f of fails) {
+    const card = buildFindingCard(f, report);
+    if (card.outcomeKind === 'runner_failure') executionCards.push(card);
+    else applicationCards.push(card);
+  }
+  const cards = [...applicationCards, ...executionCards];
+  const decision = buildReportDecision(report);
+  const repairPlan = buildRepairPlan(report);
+  const failureGroups = buildFailureGroups(report);
 
   const changes = report.comparison?.changesSincePrevious ?? null;
   const changesFirst = report.comparison?.changesSinceFirst ?? changes;
 
-  return {
-    version: 1,
+  const view = {
+    version: 2,
     runId: report.runId,
     gate: report.gate,
-    actionSummary: buildActionSummary(report, exec, fails, blocked, counts, execution),
+    decision,
+    repairPlan,
+    failureGroups,
+    actionSummary: buildActionSummary(report, exec, fails, blocked, counts, execution, decision),
     fixTheseFirst: {
       defaultFilter: { status: 'fail' },
       cards,
+      applicationCards,
+      executionCards,
       filtersAvailable: ['severity', 'status', 'moduleId', 'checkId', 'tool'],
     },
     changesSincePreviousRun: formatChangesSection(report, changes),
@@ -40,19 +61,14 @@ export function buildReportFirstView(report) {
       execution,
       note: 'Skipped, blocked, and not_tested checks are not passes.',
     },
-    aiAnalysis: {
-      status: 'disabled',
-      label: 'AI analysis unavailable',
-      message:
-        'Deterministic repair prompts, gap analysis, and structured finding cards are available without AI. Configure a provider later to enrich summaries — raw tool results are never rewritten.',
-      analysisVersion: null,
-      model: null,
-      referencedFindingIds: [],
-    },
+    comparableBaselines: report.comparableBaselines ?? null,
   };
+
+  const cfg = getAiGatewayConfig();
+  return mergeAiIntoReportFirst(view, null, cfg);
 }
 
-function buildActionSummary(report, exec, fails, blocked, counts, execution) {
+function buildActionSummary(report, exec, fails, blocked, counts, execution, decision) {
   const workflowsBlocked = blocked.map((f) => ({
     checkId: f.checkId,
     title: f.title,
@@ -62,6 +78,8 @@ function buildActionSummary(report, exec, fails, blocked, counts, execution) {
   return {
     headline: report.headline,
     gate: report.gate,
+    recommendation: decision.recommendation,
+    recommendationLabel: decision.recommendationLabel,
     highestPriorityIssues: exec.items.slice(0, 8).map((i) => ({
       findingId: i.findingId,
       checkId: i.checkId,
@@ -70,13 +88,7 @@ function buildActionSummary(report, exec, fails, blocked, counts, execution) {
       remediationSummary: i.remediationSummary,
     })),
     workflowsBlocked,
-    recommendedNextActions: [
-      fails.length ? 'Fix open failures (section B) using Cursor repair prompts.' : 'No open failures in completed checks.',
-      report.inputMode === 'url'
-        ? 'Run comprehensive repository preset for ESLint, tests, and security tools.'
-        : 'Run comprehensive URL preset to validate live behavior.',
-      'Re-run the same scope after deploy and confirm comparison shows verified fixes.',
-    ],
+    recommendedNextActions: decision.nextActions,
     runCompletion: {
       planned: execution.planned ?? null,
       completed: execution.completed ?? counts.pass + counts.fail,
@@ -106,11 +118,13 @@ function formatChangesSection(report, changes, label = 'previous') {
     notComparable: !changes.comparability.comparable,
     comparabilityIssues: changes.comparability.issues,
     verifiedFixed: changes.verifiedFixed,
+    possiblyFixed: changes.possiblyFixed ?? [],
     stillFailing: changes.stillFailing,
     newFailures: changes.newFailures,
     returned: changes.returned,
     notRetested: changes.notRetested,
     counts: changes.counts,
+    verificationPolicy: changes.verificationPolicy ?? null,
   };
 }
 
@@ -146,12 +160,16 @@ function workflowNote(f) {
 function buildCoverageSection(report) {
   const counts = report.summary?.counts ?? {};
   const tools = report.toolInventory ?? [];
+  const gapDetail = buildCoverageGapsDetail(report);
   return {
     outcomes: counts,
     categories: report.coverage?.categories ?? [],
     toolsExecuted: tools.filter((t) => t.executed),
     toolsUnavailable: tools.filter((t) => !t.executed),
     limitations: report.qaAudit?.testingLimitations ?? [],
+    gaps: gapDetail.gaps,
+    gapsTotal: gapDetail.total,
+    honestyNote: report.coverage?.honestyNote ?? gapDetail.honestyNote,
   };
 }
 

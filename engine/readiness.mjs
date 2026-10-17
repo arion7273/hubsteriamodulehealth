@@ -2,6 +2,12 @@
  * Classify rendered page state and wait for app readiness (not HTTP 200 alone).
  */
 
+import {
+  waitForEmbeddedFrames,
+  collectFrameMeasures,
+  pickPrimaryContentSnapshot,
+} from './content-frame.mjs';
+
 const LOGIN_PATH_RE = /\/(login|signin|sign-in|auth|oauth)(\/|$)/i;
 const LOGIN_TEXT_RE = /sign in|log in|password/i;
 
@@ -10,6 +16,10 @@ export async function waitForAppReadiness(page, options = {}) {
   const selector = options.selector;
   const pollMs = 250;
   const start = Date.now();
+
+  await page.waitForLoadState('domcontentloaded').catch(() => {});
+  await page.waitForLoadState('networkidle', { timeout: Math.min(6000, timeoutMs) }).catch(() => {});
+  await waitForEmbeddedFrames(page, Math.min(8000, timeoutMs));
 
   if (selector) {
     try {
@@ -67,53 +77,48 @@ export async function waitForAppReadiness(page, options = {}) {
 
 async function classifyPageState(page) {
   const url = page.url();
-  const data = await page.evaluate(() => {
-    const body = document.body;
-    const innerText = (body?.innerText ?? '').trim();
-    const textContent = (body?.textContent ?? '').trim();
-    const root = document.querySelector('#root, #app, [data-testid="root"], main') ?? body;
-    const visibleLinks = [...document.querySelectorAll('a[href]')].filter((a) => {
-      const r = a.getBoundingClientRect();
-      return r.width > 0 && r.height > 0;
-    }).length;
-    const hasPassword = !!document.querySelector('input[type="password"]');
-    const busy = !!document.querySelector('[aria-busy="true"]');
-    const cf = !!document.querySelector('#cf-challenge, .cf-turnstile, iframe[src*="challenges.cloudflare"]');
-    const h1 = (document.querySelector('h1')?.innerText ?? '').trim();
-    return {
-      innerTextLen: innerText.length,
-      textContentLen: textContent.length,
-      rootHtmlLen: root?.innerHTML?.length ?? 0,
-      rootChildCount: root?.children?.length ?? 0,
-      visibleLinks,
-      hasPassword,
-      busy,
-      cf,
-      h1,
-    };
-  });
+  const snapshots = await collectFrameMeasures(page);
+  const { snapshot: data, shellIframe, main } = pickPrimaryContentSnapshot(snapshots);
+  const contentFrameUrl = data?.frameUrl && !data?.isMain ? data.frameUrl : null;
 
   const loginPath = LOGIN_PATH_RE.test(url);
-  const loginUi = data.hasPassword && data.innerTextLen < 800 && LOGIN_TEXT_RE.test(await page.locator('body').innerText().catch(() => ''));
+  const loginUi =
+    data.hasPassword &&
+    data.innerTextLen < 800 &&
+    LOGIN_TEXT_RE.test(await page.locator('body').innerText().catch(() => ''));
 
-  if (data.cf) {
-    return { state: 'bot_challenge', ...data, url };
+  const anyCf = snapshots.some((s) => s.cf);
+  if (anyCf || data.cf) {
+    return { state: 'bot_challenge', ...data, url, shellIframe, contentFrameUrl };
   }
   if (loginPath || loginUi) {
-    return { state: 'login_required', ...data, url };
+    return { state: 'login_required', ...data, url, shellIframe, contentFrameUrl };
   }
   if (/\/403|access.denied|forbidden/i.test(url)) {
-    return { state: 'access_denied', ...data, url };
+    return { state: 'access_denied', ...data, url, shellIframe, contentFrameUrl };
   }
   if (data.busy && data.innerTextLen < 40) {
-    return { state: 'loading', ...data, url };
+    return { state: 'loading', ...data, url, shellIframe, contentFrameUrl };
   }
   const hasContent = data.innerTextLen > 0 || data.h1.length > 0 || data.visibleLinks > 0;
+  const mainLooksLikeShell =
+    main &&
+    main.iframeCount > 0 &&
+    main.innerTextLen < 40 &&
+    main.visibleLinks === 0 &&
+    hasContent &&
+    shellIframe;
   if (!hasContent && data.rootHtmlLen > 100 && data.rootChildCount > 0) {
-    return { state: 'blank_screen', ...data, url };
+    return { state: 'blank_screen', ...data, url, shellIframe, contentFrameUrl };
   }
   if (!hasContent) {
-    return { state: 'blank_screen', ...data, url };
+    return { state: 'blank_screen', ...data, url, shellIframe, contentFrameUrl };
   }
-  return { state: 'ready', ...data, url };
+  return {
+    state: 'ready',
+    ...data,
+    url,
+    shellIframe: mainLooksLikeShell || shellIframe,
+    contentFrameUrl,
+  };
 }

@@ -3,6 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STATUS, blockedResult, fingerprint, toFinding } from './contract.mjs';
 import { runCommand } from './exec.mjs';
+import { checkPlaywrightBrowsers } from '../playwright-preflight.mjs';
+import { resolveLiveAuditUrl } from '../content-frame.mjs';
 
 const lighthouseCli = fileURLToPath(new URL('../../node_modules/lighthouse/cli/index.js', import.meta.url));
 
@@ -15,6 +17,8 @@ export const lighthouseAdapter = {
     if (ctx.inputMode === 'html') return { ok: false, reason: 'Lighthouse requires a live URL (not HTML snapshot)' };
     if (!ctx.targetUrl) return { ok: false, reason: 'Lighthouse requires target URL' };
     if (!fs.existsSync(lighthouseCli)) return { ok: false, reason: 'lighthouse package not installed on runner' };
+    const pw = await checkPlaywrightBrowsers();
+    if (!pw.ok) return { ok: false, reason: pw.reason };
     return { ok: true };
   },
   async run(ctx) {
@@ -22,6 +26,19 @@ export const lighthouseAdapter = {
     const pf = await this.preflight(ctx);
     if (!pf.ok) {
       return { tool: 'lighthouse', findings: [blockedResult(this, 'ui-a11y', pf.reason, ctx)], artifacts: [] };
+    }
+    let lighthouseUrl = ctx.targetUrl;
+    let lighthouseNote = null;
+    try {
+      const resolved = await resolveLiveAuditUrl(ctx.targetUrl, {
+        timeoutMs: ctx.budgets?.timeoutMs ?? 45_000,
+      });
+      lighthouseUrl = resolved.auditUrl;
+      if (resolved.shellIframe) {
+        lighthouseNote = `Entry URL uses iframe shell; Lighthouse ran on embedded content: ${resolved.auditUrl}`;
+      }
+    } catch (e) {
+      lighthouseNote = `Could not resolve iframe content URL; using entry URL. ${String(e?.message ?? e).slice(0, 200)}`;
     }
     const outDir = path.join(ctx.artifactDir ?? '/tmp', 'lighthouse');
     fs.mkdirSync(outDir, { recursive: true });
@@ -32,7 +49,7 @@ export const lighthouseAdapter = {
       process.execPath,
       [
         lighthouseCli,
-        ctx.targetUrl,
+        lighthouseUrl,
         '--output=json',
         `--output-path=${outFile}`,
         '--quiet',
@@ -78,6 +95,7 @@ export const lighthouseAdapter = {
             title: 'Lighthouse performance below budget',
             expected: `score >= ${perfMin}`,
             actual: String(score),
+            detail: lighthouseNote,
             evidence: [{ type: 'lighthouse-json', path: outFile }],
             durationMs: Date.now() - start,
             fingerprint: fingerprint(['lighthouse', 'perf', score]),
@@ -97,6 +115,7 @@ export const lighthouseAdapter = {
             severity: 'info',
             title: 'Lighthouse performance within budget',
             actual: score != null ? String(score) : 'n/a',
+            detail: lighthouseNote,
             evidence: [{ type: 'lighthouse-json', path: outFile }],
             durationMs: Date.now() - start,
             fingerprint: fingerprint(['lighthouse', 'perf-pass']),

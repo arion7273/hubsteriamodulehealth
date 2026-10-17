@@ -46,12 +46,40 @@ function packsRun(runRequest) {
   const explicit = (runRequest.packs ?? []).filter((p) => !/^level-\d+$/.test(p));
   if (explicit.length) return explicit;
   const levels = levelsRun(runRequest);
+  return inferPacksFromLevels(levels);
+}
+
+export function inferPacksFromLevels(levels) {
   const inferred = [];
   if (levels.includes(1)) inferred.push('quick-health');
   if (levels.includes(4)) inferred.push('ui-a11y');
   if (levels.includes(3)) inferred.push('workflow');
   if (levels.includes(5)) inferred.push('load-recovery');
   return inferred;
+}
+
+/** Levels represented by selected packs (for report metadata when levels omitted). */
+export function inferLevelsFromPacks(packs) {
+  const levels = [];
+  if (packs.includes('quick-health')) levels.push(1);
+  if (packs.includes('code-quality')) levels.push(2);
+  if (packs.includes('workflow')) levels.push(3);
+  if (packs.includes('ui-a11y')) levels.push(4);
+  if (packs.includes('load-recovery')) levels.push(5);
+  if (packs.includes('security')) levels.push(2);
+  return [...new Set(levels)].sort((a, b) => a - b);
+}
+
+/**
+ * Resolve pack ids for coverage/profile (ignores legacy `level-N` placeholders).
+ * @param {object} runRequest
+ */
+export function resolvePacksExecuted(runRequest) {
+  const executed = runRequest.packsExecuted ?? [];
+  const fromExecuted = executed.filter((p) => !String(p).startsWith('level-'));
+  if (fromExecuted.length) return fromExecuted;
+  if (runRequest.packs?.length) return runRequest.packs;
+  return packsRun(runRequest);
 }
 
 function categoryRan(cat, inputMode, levels, packs) {
@@ -111,7 +139,7 @@ function skipReason(cat, inputMode, app) {
 export function buildRunCoverage(app, runRequest, toolInventory = []) {
   const inputMode = runRequest.inputMode ?? 'url';
   const levels = levelsRun(runRequest);
-  const packs = packsRun(runRequest);
+  const packs = resolvePacksExecuted(runRequest);
   const modules = app.modules ?? [];
 
   const categories = BUILD_CATEGORIES.map((cat) => {
@@ -166,9 +194,11 @@ export function buildRunCoverage(app, runRequest, toolInventory = []) {
   else if (recommendedPacks.length === 0) profileLabel = 'Broad build verification';
 
   const honestyNote =
-    profileLabel.includes('only') || profileLabel.includes('Quick')
+    profileLabel.includes('only') || profileLabel.includes('Quick') || (levels.length === 1 && levels[0] === 1 && packs.length <= 1)
       ? 'This run is a narrow smoke check — not a full build or release gate. Repository tests, module routes, and deep quality packs were not required.'
-      : null;
+      : packs.length < 2 && inputMode === 'url'
+        ? 'Limited URL pack scope — expand packs (ui-a11y, code-quality with repo path) before treating results as release-ready.'
+        : null;
 
   return {
     profileLabel,

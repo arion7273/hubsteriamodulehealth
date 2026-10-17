@@ -1,5 +1,8 @@
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
+import { checkPlaywrightBrowsers } from '../playwright-preflight.mjs';
+import { waitForEmbeddedFrames, resolvePrimaryContentFrame } from '../content-frame.mjs';
+import { waitForAppReadiness } from '../readiness.mjs';
 import { STATUS, fingerprint, toFinding } from './contract.mjs';
 
 export const axeAdapter = {
@@ -8,7 +11,8 @@ export const axeAdapter = {
   version: '4.10+',
   inputModes: ['url', 'html'],
   async preflight() {
-    return { ok: true };
+    const pf = await checkPlaywrightBrowsers();
+    return pf.ok ? { ok: true } : { ok: false, reason: pf.reason };
   },
   async run(ctx) {
     const start = Date.now();
@@ -27,8 +31,18 @@ export const axeAdapter = {
         await page.setContent(ctx.htmlSnapshot.html, { waitUntil: 'domcontentloaded' });
       } else {
         await page.goto(ctx.targetUrl, { waitUntil: 'load', timeout: ctx.budgets?.timeoutMs ?? 45000 });
+        await waitForEmbeddedFrames(page, 10_000);
+        await waitForAppReadiness(page, {
+          timeoutMs: Math.min(20_000, ctx.budgets?.timeoutMs ?? 45_000),
+          selector: ctx.app?.readiness?.selector,
+        }).catch(() => {});
       }
-      const axe = await new AxeBuilder({ page }).analyze();
+      const { shellIframe } = await resolvePrimaryContentFrame(page);
+      let builder = new AxeBuilder({ page });
+      if (shellIframe) {
+        builder = builder.include('iframe');
+      }
+      const axe = await builder.analyze();
       for (const v of axe.violations ?? []) {
         const nodeCount = v.nodes?.length ?? 0;
         const samples = (v.nodes ?? []).slice(0, 5).map((n) => ({

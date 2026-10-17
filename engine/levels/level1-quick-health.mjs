@@ -4,6 +4,7 @@ import { openBrowserSession, createInstrumentedPage, setHtmlContent } from '../b
 import { waitForAppReadiness } from '../readiness.mjs';
 import { captureScreenshot, captureSanitizedDom } from '../evidence.mjs';
 import { applyPrerequisites } from '../prerequisites.mjs';
+import { identifyBuild } from '../build-identification.mjs';
 
 function blockedDependent(findings, reason) {
   return applyPrerequisites(findings, 'l1.readiness.application', 'l1.links.');
@@ -97,6 +98,15 @@ export async function runLevel1QuickHealth(ctx) {
         return findings;
       }
 
+      if (ctx.runMeta) {
+        ctx.runMeta.buildIdentification = await identifyBuild({
+          page,
+          response,
+          repoRoot: ctx.repoRoot,
+          explicitBuildId: ctx.buildId ?? null,
+        });
+      }
+
       findings.push(
         createFinding({
           checkId: 'l1.navigation.outcome',
@@ -168,8 +178,25 @@ export async function runLevel1QuickHealth(ctx) {
       }),
     );
 
-    const readinessStatus =
-      readiness.ready ? 'pass' : readiness.state === 'login_required' || readiness.state === 'access_denied' ? 'fail' : 'blocked';
+    const failStates = new Set([
+      'login_required',
+      'access_denied',
+      'blank_screen',
+      'bot_challenge',
+      'loading',
+    ]);
+    const readinessStatus = readiness.ready
+      ? 'pass'
+      : failStates.has(readiness.state)
+        ? 'fail'
+        : 'blocked';
+    const readinessSeverity = readiness.ready
+      ? 'info'
+      : readiness.state === 'blank_screen' || readiness.state === 'bot_challenge'
+        ? 'high'
+        : readiness.state === 'login_required' || readiness.state === 'access_denied'
+          ? 'high'
+          : 'medium';
 
     if (!readiness.ready && runId) {
       try {
@@ -187,7 +214,7 @@ export async function runLevel1QuickHealth(ctx) {
         environment,
         level: 1,
         status: readinessStatus,
-        severity: readiness.ready ? 'info' : 'high',
+        severity: readinessSeverity,
         title: 'Application readiness (rendered page)',
         expected: 'Visible content, landmark, or configured readiness selector',
         actual: `state=${readiness.state}, waitedMs=${readiness.waitedMs}, method=${readiness.method}, innerTextLen=${readiness.innerTextLen}, visibleLinks=${readiness.visibleLinks}`,

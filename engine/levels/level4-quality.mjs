@@ -6,6 +6,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 import { createFinding } from '../findings.mjs';
+import { waitForEmbeddedFrames, resolvePrimaryContentFrame } from '../content-frame.mjs';
+import { waitForAppReadiness } from '../readiness.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.join(__dirname, '../..');
@@ -45,7 +47,13 @@ export async function runLevel4Quality(ctx) {
   if (inputMode === 'html') {
     await page.setContent(htmlSnapshot.html, { waitUntil: 'domcontentloaded' });
   } else {
-    await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+    await page.goto(targetUrl, { waitUntil: 'load', timeout: budgets?.timeoutMs ?? 45000 });
+    await page.waitForLoadState('networkidle', { timeout: Math.min(8000, budgets?.timeoutMs ?? 45000) }).catch(() => {});
+    await waitForEmbeddedFrames(page, 10_000);
+    await waitForAppReadiness(page, {
+      timeoutMs: Math.min(20_000, budgets?.timeoutMs ?? 45_000),
+      selector: app?.readiness?.selector,
+    }).catch(() => {});
   }
 
   for (const vp of VIEWPORTS) {
@@ -71,7 +79,12 @@ export async function runLevel4Quality(ctx) {
 
   if (!ctx.skipAxe) {
   try {
-    const axeResults = await new AxeBuilder({ page }).analyze();
+    const { shellIframe } = await resolvePrimaryContentFrame(page);
+    let axeBuilder = new AxeBuilder({ page });
+    if (shellIframe) {
+      axeBuilder = axeBuilder.include('iframe');
+    }
+    const axeResults = await axeBuilder.analyze();
     const violations = axeResults.violations ?? [];
     if (violations.length) {
       for (const v of violations.slice(0, 8)) {

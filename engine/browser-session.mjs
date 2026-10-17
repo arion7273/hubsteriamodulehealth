@@ -62,7 +62,8 @@ export async function createInstrumentedPage(context, baseOrigin) {
     session.initialUrl = url;
     let response;
     try {
-      response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+      response = await page.goto(url, { waitUntil: 'load', timeout: timeoutMs });
+      await page.waitForLoadState('networkidle', { timeout: Math.min(8000, timeoutMs) }).catch(() => {});
       session.navigationOutcome = 'ok';
     } catch (e) {
       session.navigationOutcome = 'error';

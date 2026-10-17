@@ -5,6 +5,7 @@ import { PACK_DEFINITIONS } from '../engine/packs/definitions.mjs';
 import { normalizeRunReport } from '../engine/report-normalize.mjs';
 import { attachReportComparison } from '../engine/report-comparison.mjs';
 import { buildReportFirstView } from '../engine/report-first-view.mjs';
+import { listComparableBaselineRuns } from '../engine/comparable-runs.mjs';
 import { getAiGatewayConfig } from '../engine/ai-config.mjs';
 import { aiAnalysisCacheKey, mergeAiIntoReportFirst } from '../engine/ai-report-analysis.mjs';
 import { loadAiCache } from './ai-cache.mjs';
@@ -85,6 +86,10 @@ export function saveRun(report) {
 
 const WORKER_DIR = path.join(DATA_DIR, 'worker');
 
+export function loadNormalizedRunBare(runId) {
+  return normalizeRunBare(runId);
+}
+
 function normalizeRunBare(runId) {
   let raw = loadJson(path.join(RUNS_DIR, `${runId}.json`), null);
   if (!raw) {
@@ -112,14 +117,16 @@ export function getRun(runId) {
   if (!normalized) return null;
   if (fromWorker) saveRun(normalized);
   const withComparison = attachReportComparison(normalized, normalizeRunBare);
-  const reportFirst = buildReportFirstView(withComparison);
+  const comparableBaselines = listComparableBaselineRuns(withComparison, listRuns(withComparison.appId));
+  const withBaselines = { ...withComparison, comparableBaselines };
+  const reportFirst = buildReportFirstView(withBaselines);
   const cfg = getAiGatewayConfig();
   const cacheEntry = loadAiCache(runId);
-  const key = aiAnalysisCacheKey(withComparison);
+  const key = aiAnalysisCacheKey(withBaselines);
   const cachedAnalysis =
     cacheEntry?.cacheKey === key && cacheEntry?.analysis ? cacheEntry.analysis : null;
   return {
-    ...withComparison,
+    ...withBaselines,
     reportFirst: mergeAiIntoReportFirst(reportFirst, cachedAnalysis, cfg),
   };
 }

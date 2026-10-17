@@ -7,7 +7,7 @@
       "configured": false,
       "level": 3,
       "tags": ["mutating"],
-      "note": "Unconfigured until routes and seeded resident IDs are set in app settings.",
+      "note": "BLOCKED: Set registry app baseUrl, seeded resident IDs in data/secrets.json, and recipe steps in registry/workflows/recipes/. No Care staging credentials in this repo.",
       "steps": []
     },
     {
@@ -17,7 +17,7 @@
       "configured": false,
       "level": 3,
       "tags": ["mutating", "payments-sandbox"],
-      "note": "Requires payment sandbox credentials and barista queue routes.",
+      "note": "BLOCKED: Requires Brew local URL, payment sandbox keys, and barista queue routes.",
       "steps": []
     },
     {
@@ -27,6 +27,7 @@
       "configured": false,
       "level": 3,
       "tags": ["mutating", "phi-test-data"],
+      "note": "BLOCKED: Configure clinic-ops demo URL, test patient seed, and clinician account in secrets before enabling recipe.",
       "steps": []
     },
     {
@@ -36,6 +37,61 @@
       "configured": false,
       "level": 3,
       "tags": ["mutating"],
+      "note": "BLOCKED: Guardian staging URL and portal test accounts not configured in this repo.",
+      "steps": []
+    },
+    {
+      "id": "gap-create-persist",
+      "appId": "workflow-gap-fixture",
+      "label": "Create record → save → refresh → verify persistence",
+      "configured": true,
+      "level": 3,
+      "recipeFile": "gap-create-persist.json",
+      "defaultVariant": "fixed",
+      "tags": ["synthetic"],
+      "steps": []
+    },
+    {
+      "id": "gap-edit-downstream",
+      "appId": "workflow-gap-fixture",
+      "label": "Edit record → list view shows update",
+      "configured": true,
+      "level": 3,
+      "recipeFile": "gap-edit-downstream.json",
+      "defaultVariant": "fixed",
+      "tags": ["synthetic"],
+      "steps": []
+    },
+    {
+      "id": "gap-role-deny",
+      "appId": "workflow-gap-fixture",
+      "label": "Staff denied admin export (UI)",
+      "configured": true,
+      "level": 3,
+      "recipeFile": "gap-role-deny.json",
+      "tags": ["synthetic", "rbac"],
+      "steps": []
+    },
+    {
+      "id": "gap-nav",
+      "appId": "workflow-gap-fixture",
+      "label": "Navigation reaches create workflow",
+      "configured": true,
+      "level": 3,
+      "recipeFile": "gap-nav.json",
+      "defaultVariant": "fixed",
+      "tags": ["synthetic"],
+      "steps": []
+    },
+    {
+      "id": "gap-validation",
+      "appId": "workflow-gap-fixture",
+      "label": "Required field validation on empty save",
+      "configured": true,
+      "level": 3,
+      "recipeFile": "gap-validation.json",
+      "defaultVariant": "fixed",
+      "tags": ["synthetic"],
       "steps": []
     }
   ]

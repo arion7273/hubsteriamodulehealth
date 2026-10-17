@@ -1,0 +1,87 @@
+{
+  "reportId": "build-checkup-20261016",
+  "generatedAt": "2026-10-16T12:40:00-07:00",
+  "recommendation": "FIX_FIRST",
+  "baselineSha": "1fab6c371b4764d04e24b165948138c7afea41fd",
+  "headSha": "5831549e9cf77262e512ebd27a590c65807314b3",
+  "testedState": "dirty_working_tree",
+  "originMainSha": "81434e35e863c2feb2743737f1fb6817cdf84e00",
+  "priorReportId": null,
+  "findings": [
+    {
+      "id": "DEL-001",
+      "severity": "high",
+      "status": "NEW",
+      "category": "delivery",
+      "title": "Local main diverged from origin/main",
+      "evidence": "merge-base 1fab6c3; 1 commit local-only (5831549); 7 commits on origin/main including merge PR #10 @ 81434e3",
+      "fix": "git fetch origin && git rebase origin/main (or merge), resolve conflicts, re-run verify suite",
+      "verification": "git log --oneline HEAD..origin/main empty after integration"
+    },
+    {
+      "id": "DEL-002",
+      "severity": "medium",
+      "status": "NEW",
+      "category": "delivery",
+      "title": "Large uncommitted application delta not pushed",
+      "evidence": "28 tracked files unstaged; 3 new engine modules; no staged changes",
+      "fix": "Review diff, split commits, push branch/PR",
+      "verification": "CI green on PR SHA matching pushed commit"
+    },
+    {
+      "id": "TEST-001",
+      "severity": "high",
+      "status": "NEW",
+      "category": "test",
+      "title": "verify:repair-e2e failed",
+      "evidence": "audit/build-checkup-20261016/evidence/verify-repair-e2e.log — verify status verification_failed; baseline step persist empty",
+      "workflow": "L3 repair workspace / gap-create-persist",
+      "fix": "Revert accidental fixtures/workflow-app/create.html broken-persist change; re-run verify:repair-e2e",
+      "verification": "npm run verify:repair-e2e exits 0"
+    },
+    {
+      "id": "TEST-002",
+      "severity": "low",
+      "status": "NEW",
+      "category": "test",
+      "title": "Unstaged fixture change contradicts broken-persist scenario",
+      "evidence": "git diff fixtures/workflow-app/create.html adds localStorage.setItem in broken-persist branch",
+      "workflow": "repair-e2e baseline",
+      "fix": "Remove debug persist lines from broken-persist variant or commit intentional fixture change with updated tests",
+      "verification": "Baseline L3 step fails as designed; verify reaches verified_fixed after patch"
+    },
+    {
+      "id": "OPS-001",
+      "severity": "low",
+      "status": "NEW",
+      "category": "ops",
+      "title": "Long-running server on :4177 may be stale vs working tree",
+      "evidence": "GET /api/health returned legacy body without playwright field; EADDRINUSE on second start",
+      "fix": "Restart npm start after server/index.mjs changes",
+      "verification": "/api/health includes playwright: ready|missing"
+    },
+    {
+      "id": "SUG-001",
+      "severity": "info",
+      "status": "NEW",
+      "category": "cleanup",
+      "title": "Duplicate readiness waits in axe and level4",
+      "evidence": "engine/adapters/axe.mjs and engine/levels/level4-quality.mjs both call waitForEmbeddedFrames + waitForAppReadiness",
+      "fix": "Optional shared helper in content-frame or browser-session",
+      "verification": "n/a — suggestion only"
+    }
+  ],
+  "checks": {
+    "typecheck": { "status": "skipped", "reason": "No root/web typecheck script in package.json" },
+    "lint": { "status": "skipped", "reason": "No eslint script in package.json" },
+    "buildWeb": { "status": "passed", "evidence": "evidence/build-web.log" },
+    "npmTest": { "status": "passed", "evidence": "evidence/test-suite.log" },
+    "verifyRepairE2e": { "status": "failed", "evidence": "evidence/verify-repair-e2e.log" },
+    "verifyWorkflowsRegression": { "status": "passed", "evidence": "evidence/verify-workflows-regression.log" },
+    "browserLandingSmoke": { "status": "passed", "evidence": "Landing renders at http://127.0.0.1:4177/ (snapshot)" },
+    "browserFullScanUi": { "status": "skipped", "reason": "Not run end-to-end scan submit against live URL in this checkup" },
+    "deployProduction": { "status": "unknown", "reason": "No deployment API/SHA matched to local tree" },
+    "ciLocalHead": { "status": "unknown", "reason": "5831549 not pushed; no workflow run for this SHA" },
+    "ciOriginMain": { "status": "passed", "sha": "81434e35e863c2feb2743737f1fb6817cdf84e00", "evidence": "GitHub Actions run 38834769492 success on merge PR #10" }
+  }
+}

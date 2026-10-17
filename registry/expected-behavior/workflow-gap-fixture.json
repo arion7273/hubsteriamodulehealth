@@ -1,0 +1,44 @@
+{
+  "appId": "workflow-gap-fixture",
+  "version": 1,
+  "modules": [
+    { "id": "records", "routes": ["/fixtures/workflow-app/create.html", "/fixtures/workflow-app/list.html"] },
+    { "id": "access", "routes": ["/fixtures/workflow-app/roles.html"] }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-PERSIST",
+      "label": "Save persists record fields",
+      "workflows": ["gap-create-persist"],
+      "severity": "high"
+    },
+    {
+      "id": "REQ-DOWNSTREAM",
+      "label": "List view reflects saved record",
+      "workflows": ["gap-edit-downstream"],
+      "severity": "high"
+    },
+    {
+      "id": "REQ-RBAC",
+      "label": "Staff cannot run admin export",
+      "workflows": ["gap-role-deny"],
+      "severity": "blocker"
+    },
+    {
+      "id": "REQ-NAV",
+      "label": "Primary navigation reaches create workflow",
+      "workflows": ["gap-nav"],
+      "severity": "medium"
+    },
+    {
+      "id": "REQ-VALIDATION",
+      "label": "Empty name blocked with validation",
+      "workflows": ["gap-validation"],
+      "severity": "high"
+    }
+  ],
+  "roles": [
+    { "id": "staff", "allowedActions": ["create_record"] },
+    { "id": "admin", "allowedActions": ["create_record", "export_records"] }
+  ]
+}

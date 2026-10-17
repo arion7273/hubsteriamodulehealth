@@ -28,6 +28,7 @@ export function compareRunsDetailed(baselineReport, currentReport) {
   const keys = new Set([...base.keys(), ...cur.keys()]);
 
   const verifiedFixed = [];
+  const possiblyFixed = [];
   const stillFailing = [];
   const newFailures = [];
   const returned = [];
@@ -57,7 +58,21 @@ export function compareRunsDetailed(baselineReport, currentReport) {
       continue;
     }
     if (bFail && cExecuted && !cFail) {
-      verifiedFixed.push({ ...row(c, key), previous: row(b, key) });
+      const entry = { ...row(c, key), previous: row(b, key) };
+      if (comparability.comparable) {
+        verifiedFixed.push({ ...entry, verificationLevel: 'verified' });
+      } else if (comparability.partial) {
+        verifiedFixed.push({
+          ...entry,
+          verificationLevel: 'approximate',
+          reason: comparability.issues.join('; '),
+        });
+      } else {
+        possiblyFixed.push({
+          ...entry,
+          reason: 'Baseline and current runs are not fully comparable — treat as unverified until scope matches.',
+        });
+      }
     } else if (bFail && cFail) {
       stillFailing.push({ current: row(c, key), baseline: row(b, key) });
     } else if (!bFail && cFail) {
@@ -76,6 +91,7 @@ export function compareRunsDetailed(baselineReport, currentReport) {
     baselineRunId: baselineReport.runId,
     currentRunId: currentReport.runId,
     verifiedFixed,
+    possiblyFixed,
     stillFailing,
     newFailures,
     returned,
@@ -83,10 +99,17 @@ export function compareRunsDetailed(baselineReport, currentReport) {
     unchangedPassing,
     counts: {
       verifiedFixed: verifiedFixed.length,
+      possiblyFixed: possiblyFixed.length,
       stillFailing: stillFailing.length,
       newFailures: newFailures.length,
       returned: returned.length,
       notRetested: notRetested.length,
+    },
+    verificationPolicy: {
+      verifiedFixedRequiresComparableRuns: true,
+      note: comparability.comparable
+        ? 'Verified fixed only when the same check completed and passed under comparable scope.'
+        : 'Runs are not fully comparable — items that look fixed are listed as possibly fixed, not verified.',
     },
   };
 }
